@@ -105,7 +105,7 @@ create table if not exists pos_orders (
   order_number serial,
   items jsonb not null,
   subtotal numeric(10,2) not null,
-  tax numeric(10,2) not null,
+
   discount numeric(10,2) default 0,
   total numeric(10,2) not null,
   payment_method text not null,
@@ -333,7 +333,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
     const order = {
       items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
       subtotal: parseFloat(subtotal.toFixed(2)),
-      tax: 0,
+    
       discount: 0,
       total: parseFloat(total.toFixed(2)),
       payment_method: paymentMethod,
