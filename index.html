@@ -609,7 +609,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
       {/* Top nav */}
       <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border)',padding:'0 1rem',
         display:'flex',alignItems:'center',gap:0,flexShrink:0}}>
-        <div style={{fontSize:18,fontWeight:700,marginRight:'1.5rem',letterSpacing:'-0.5px'}}>☕ CafePOS</div>
+        <div style={{fontSize:18,fontWeight:700,marginRight:'1.5rem',letterSpacing:'-0.5px'}}>☕ Kape sa Harong</div>
         {[['pos','POS'],['reports','Reports'],['products','Products']].map(([id,label]) => (
           <button key={id} onClick={() => setTab(id)}
             style={{padding:'14px 18px',background:'none',color: tab===id ? 'var(--amber)' : 'var(--text2)',
