@@ -9,6 +9,7 @@
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -81,7 +82,7 @@ create table if not exists pos_branches (
 create table if not exists pos_categories (
   id uuid primary key default gen_random_uuid(),
   name text not null,
-  icon text default '☕',
+  icon text default 'bi-cup-fill',
   sort_order int default 0,
   created_at timestamptz default now()
 );
@@ -125,8 +126,8 @@ create table if not exists pos_expenses (
 
 -- Sample categories
 insert into pos_categories (name, icon, sort_order) values
-  ('Coffee', '☕', 1), ('Tea', '🍵', 2), ('Pastries', '🥐', 3),
-  ('Sandwiches', '🥪', 4), ('Cold Drinks', '🧃', 5)
+  ('Coffee', 'bi-cup-fill', 1), ('Tea', 'bi-cup-straw', 2), ('Pastries', 'bi-bag-fill', 3),
+  ('Sandwiches', 'bi-basket3-fill', 4), ('Cold Drinks', 'bi-droplet-half', 5)
 on conflict do nothing;
 
 -- Disable row level security on all app tables so anon/public key can write through Supabase
@@ -187,7 +188,7 @@ function ConfigScreen({ onConnect }) {
       <div style={{width:'100%',maxWidth:520}}>
         <div style={{marginBottom:'2.5rem'}}>
           <div style={{fontSize:32,fontWeight:700,letterSpacing:'-1px',marginBottom:6}}>
-            ☕ Kape sa Harong
+            <i className="bi bi-cup-fill" style={{fontSize:20}}></i> Kape sa Harong
           </div>
           <div style={{color:'var(--text2)',fontSize:14}}>Connect your Supabase project to get started</div>
         </div>
@@ -556,7 +557,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
       ${order.change > 0 ? `<div style="display:flex;justify-content:space-between;font-size:12px"><span>Change</span><span>₱${parseFloat(order.change).toFixed(2)}</span></div>` : ''}
       ${order.note ? `<div style="font-size:11px;margin-top:6px">Note: ${order.note}</div>` : ''}
       <div style="border-top:1px dashed #000;margin:6px 0"></div>
-      <div style="text-align:center;font-size:11px">Thank you! Come again ☕</div>
+      <div style="text-align:center;font-size:11px">Thank you! Come again</div>
     `;
     window.print();
     el.style.display = 'none';
@@ -585,7 +586,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
 
   if (loading) return (
     <div style={{height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:12}}>
-      <div style={{fontSize:28}}>☕</div>
+      <div style={{fontSize:28}}><i className="bi bi-cup-fill"></i></div>
       <div style={{color:'var(--text2)',fontSize:14}}>Loading…</div>
     </div>
   );
@@ -609,7 +610,10 @@ function POSApp({ supabaseUrl, supabaseKey }) {
       {/* Top nav */}
       <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border)',padding:'0 1rem',
         display:'flex',alignItems:'center',gap:0,flexShrink:0}}>
-        <div style={{fontSize:18,fontWeight:700,marginRight:'1.5rem',letterSpacing:'-0.5px'}}>☕ Kape sa Harong</div>
+        <div style={{fontSize:18,fontWeight:700,marginRight:'1.5rem',letterSpacing:'-0.5px',display:'flex',alignItems:'center',gap:8}}>
+          <i className="bi bi-cup-fill" style={{fontSize:20}}></i>
+          <span>Kape sa Harong</span>
+        </div>
         {[['pos','POS'],['reports','Reports'],['products','Products']].map(([id,label]) => (
           <button key={id} onClick={() => setTab(id)}
             style={{padding:'14px 18px',background:'none',color: tab===id ? 'var(--amber)' : 'var(--text2)',
@@ -646,7 +650,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
             {/* Search + Categories */}
             <div style={{padding:'12px',borderBottom:'1px solid var(--border)',background:'var(--bg2)'}}>
               <div style={{position:'relative',marginBottom:10}}>
-                <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:'var(--text3)',fontSize:16}}>🔍</span>
+                <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:'var(--text3)',fontSize:16}}><i className="bi bi-search"></i></span>
                 <input value={search} onChange={e => setSearch(e.target.value)}
                   placeholder="Search menu…"
                   style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border2)',borderRadius:8,
@@ -655,7 +659,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
               <div style={{display:'flex',gap:8,overflowX:'auto',paddingBottom:2}}>
                 <CatChip active={activeCategory==='all'} onClick={() => setActiveCategory('all')} label="All" />
                 {categories.map(c => (
-                  <CatChip key={c.id} active={activeCategory===c.id} onClick={() => setActiveCategory(c.id)} label={`${c.icon} ${c.name}`} />
+                  <CatChip key={c.id} active={activeCategory===c.id} onClick={() => setActiveCategory(c.id)} label={<><UiIcon icon={c.icon} />{c.name}</>} />
                 ))}
               </div>
             </div>
@@ -686,7 +690,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
             <div style={{flex:1,overflowY:'auto',padding:'8px'}}>
               {cart.length === 0 && (
                 <div style={{textAlign:'center',padding:'3rem 1rem',color:'var(--text3)'}}>
-                  <div style={{fontSize:32,marginBottom:8}}>🛒</div>
+                  <div style={{fontSize:32,marginBottom:8}}><i className="bi bi-cart" /></div>
                   Tap items to add to order
                 </div>
               )}
@@ -732,14 +736,14 @@ function POSApp({ supabaseUrl, supabaseKey }) {
 
             {/* Payment method */}
             <div style={{padding:'0 10px 10px',display:'flex',gap:8}}>
-              {[['cash','💵 Cash'],['card','💳 Card'],['gcash','📱 GCash'],['maya','🟢 Maya']].map(([k,l]) => (
+              {[['cash','bi-cash-stack','Cash'],['card','bi-credit-card','Card'],['gcash','bi-phone','GCash'],['maya','bi-wallet','Maya']].map(([k,icon,label]) => (
                 <button key={k} onClick={() => setPaymentMethod(k)}
                   style={{flex:1,padding:'8px 4px',borderRadius:8,fontSize:11,fontWeight:500,
                     background: paymentMethod===k ? 'var(--amber)' : 'var(--bg3)',
                     color: paymentMethod===k ? '#1a0f00' : 'var(--text2)',
                     border:`1px solid ${paymentMethod===k ? 'var(--amber)' : 'var(--border)'}`,
                     transition:'all 0.15s'}}>
-                  {l}
+                  <span style={{display:'inline-flex',alignItems:'center',gap:6}}><i className={`bi ${icon}`} style={{fontSize:12}}></i>{label}</span>
                 </button>
               ))}
             </div>
@@ -871,7 +875,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
                       <td style={{padding:'10px 14px'}}>
                         <button onClick={() => printReceipt(o)}
                           style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',padding:'4px 10px',borderRadius:6,fontSize:11}}>
-                          🖨 Print
+                          <span style={{display:'inline-flex',alignItems:'center',gap:6}}><i className="bi bi-printer" /> Print</span>
                         </button>
                       </td>
                     </tr>
@@ -892,7 +896,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
       {receiptOpen && lastOrder && (
         <Modal onClose={() => setReceiptOpen(false)}>
           <div style={{textAlign:'center',marginBottom:'1.5rem'}}>
-            <div style={{fontSize:48,marginBottom:8}}>✅</div>
+            <div style={{fontSize:48,marginBottom:8}}><i className="bi bi-check-circle-fill" style={{color:'var(--green)'}}></i></div>
             <div style={{fontSize:20,fontWeight:700}}>Order Complete</div>
             <div style={{color:'var(--text2)',fontSize:14}}>#{lastOrder.order_number || lastOrder.id?.slice(-6).toUpperCase()}</div>
           </div>
@@ -919,7 +923,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
             <button onClick={() => printReceipt(lastOrder)}
               style={{flex:1,padding:'12px',background:'var(--bg3)',border:'1px solid var(--border2)',
                 color:'var(--text)',borderRadius:10,fontWeight:500,fontSize:14}}>
-              🖨 Print Receipt
+              <span style={{display:'inline-flex',alignItems:'center',gap:6}}><i className="bi bi-printer" /> Print Receipt</span>
             </button>
             <button onClick={() => setReceiptOpen(false)}
               style={{flex:1,padding:'12px',background:'var(--amber)',color:'#1a0f00',
@@ -1002,6 +1006,11 @@ function CatChip({ active, onClick, label }) {
   );
 }
 
+function UiIcon({ icon, style }) {
+  const iconClass = icon && icon.startsWith('bi-') ? icon : 'bi-basket3-fill';
+  return <i className={`bi ${iconClass}`} style={{fontSize:18,verticalAlign:'middle',marginRight:6,...style}}></i>;
+}
+
 function ProductCard({ product, onAdd }) {
   const [pressed, setPressed] = useState(false);
   return (
@@ -1014,7 +1023,7 @@ function ProductCard({ product, onAdd }) {
         display:'flex',flexDirection:'column',gap:6
       }}>
       <div style={{fontSize:24}}>
-        {product.icon || '🍽️'}
+        <UiIcon icon={product.icon || 'bi-basket3-fill'} style={{fontSize:24,marginRight:0}} />
       </div>
       <div style={{fontSize:13,fontWeight:500,color:'var(--text)',lineHeight:1.3}}>{product.name}</div>
       <div style={{fontSize:15,fontWeight:700,color:'var(--amber)'}}>₱{parseFloat(product.price).toFixed(2)}</div>
@@ -1077,15 +1086,15 @@ function Modal({ children, onClose }) {
 
 // ── Products Manager ──────────────────────────────────────────────────────────
 function ProductsManager({ db, categories, products, onRefresh, showToast, currentBranch }) {
-  const [form, setForm] = useState({ name:'', price:'', category_id:'', icon:'🍽️', available:true });
+  const [form, setForm] = useState({ name:'', price:'', category_id:'', icon:'bi-basket3-fill', available:true });
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [catForm, setCatForm] = useState({ name:'', icon:'☕' });
+  const [catForm, setCatForm] = useState({ name:'', icon:'bi-cup-fill' });
   const [showCatForm, setShowCatForm] = useState(false);
   const [branchesList, setBranchesList] = useState([]);
   const [branchForm, setBranchForm] = useState({ name:'', address:'' });
 
-  const ICONS = ['☕','🍵','🥐','🥪','🧃','🍰','🍳','🥗','🍜','🫖','🧋','🍹','🥤','🍮','🍩','🍔','🌯','🥙'];
+  const ICONS = ['bi-cup-fill','bi-cup-straw','bi-bag-fill','bi-basket3-fill','bi-droplet-half','bi-bell-fill','bi-leaf','bi-thermometer-half','bi-alarm','bi-phone','bi-archive','bi-file-earmark-text','bi-box-seam'];
 
   const save = async () => {
     if (!form.name || !form.price) { showToast('Name and price required','error'); return; }
@@ -1097,7 +1106,7 @@ function ProductsManager({ db, categories, products, onRefresh, showToast, curre
       : db.from('pos_products').insert(data);
     const { error } = await op;
     if (error) { showToast('Error saving product','error'); }
-    else { showToast(editing ? 'Product updated' : 'Product added'); setForm({name:'',price:'',category_id:'',icon:'🍽️',available:true}); setEditing(null); onRefresh(); }
+    else { showToast(editing ? 'Product updated' : 'Product added'); setForm({name:'',price:'',category_id:'',icon:'bi-basket3-fill',available:true}); setEditing(null); onRefresh(); }
     setSaving(false);
   };
 
@@ -1115,7 +1124,7 @@ function ProductsManager({ db, categories, products, onRefresh, showToast, curre
   const saveCategory = async () => {
     if (!catForm.name) return;
     await db.from('pos_categories').insert({ name: catForm.name, icon: catForm.icon, sort_order: categories.length+1 });
-    setCatForm({name:'',icon:'☕'}); setShowCatForm(false); onRefresh();
+    setCatForm({name:'',icon:'bi-cup-fill'}); setShowCatForm(false); onRefresh();
   };
 
   const loadBranches = async () => {
@@ -1139,7 +1148,7 @@ function ProductsManager({ db, categories, products, onRefresh, showToast, curre
 
   const editProduct = (p) => {
     setEditing(p.id);
-    setForm({ name: p.name, price: String(p.price), category_id: p.category_id || '', icon: '🍽️', available: p.available });
+    setForm({ name: p.name, price: String(p.price), category_id: p.category_id || '', icon: 'bi-basket3-fill', available: p.available });
     window.scrollTo(0,0);
   };
 
@@ -1160,7 +1169,7 @@ function ProductsManager({ db, categories, products, onRefresh, showToast, curre
           <Field label="Category">
             <select value={form.category_id} onChange={e => setForm(f=>({...f,category_id:e.target.value}))} style={inputStyle}>
               <option value="">No category</option>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </Field>
           <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1rem'}}>
@@ -1169,7 +1178,7 @@ function ProductsManager({ db, categories, products, onRefresh, showToast, curre
           </div>
           <div style={{display:'flex',gap:8}}>
             {editing && (
-              <button onClick={() => { setEditing(null); setForm({name:'',price:'',category_id:'',icon:'🍽️',available:true}); }}
+              <button onClick={() => { setEditing(null); setForm({name:'',price:'',category_id:'',icon:'bi-basket3-fill',available:true}); }}
                 style={{flex:1,padding:'10px',background:'var(--bg3)',border:'1px solid var(--border2)',color:'var(--text2)',borderRadius:8,fontSize:13}}>Cancel</button>
             )}
             <button onClick={save} disabled={saving}
@@ -1189,7 +1198,7 @@ function ProductsManager({ db, categories, products, onRefresh, showToast, curre
           </div>
           {showCatForm && (
             <div style={{display:'flex',gap:8,marginBottom:'1rem'}}>
-              <input value={catForm.icon} onChange={e => setCatForm(f=>({...f,icon:e.target.value}))} placeholder="🍵"
+              <input value={catForm.icon} onChange={e => setCatForm(f=>({...f,icon:e.target.value}))} placeholder="bi-cup-fill"
                 style={{...inputStyle,width:48,textAlign:'center',padding:'8px 4px'}} />
               <input value={catForm.name} onChange={e => setCatForm(f=>({...f,name:e.target.value}))} placeholder="Category name"
                 style={{...inputStyle,flex:1}} />
@@ -1198,8 +1207,8 @@ function ProductsManager({ db, categories, products, onRefresh, showToast, curre
           )}
           <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
             {categories.map(c => (
-              <span key={c.id} style={{background:'var(--bg3)',border:'1px solid var(--border)',padding:'5px 12px',borderRadius:20,fontSize:13}}>
-                {c.icon} {c.name}
+              <span key={c.id} style={{background:'var(--bg3)',border:'1px solid var(--border)',padding:'5px 12px',borderRadius:20,fontSize:13,display:'inline-flex',alignItems:'center',gap:6}}>
+                <UiIcon icon={c.icon} />{c.name}
               </span>
             ))}
           </div>
