@@ -209,7 +209,7 @@ function ConfigScreen({ onConnect }) {
           </pre>
           <div style={{fontSize:12,color:'var(--text3)',marginTop:'0.75rem'}}>
             The button above copies the full schema, including branches and expenses. Run it in Supabase if you haven’t already.
-            If writes still fail, check Supabase table policies: anon/public key needs insert/update permission on `pos_orders` and `pos_expenses`.
+            If writes still fail, check Supabase table policies: anon/public key needs insert/update/select permission on `pos_branches`, `pos_products`, `pos_orders`, and `pos_expenses`.
           </div>
         </div>
       </div>
