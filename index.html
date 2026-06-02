@@ -161,7 +161,9 @@ function ConfigScreen({ onConnect }) {
       if (missing && missing.error.code === '42P01') {
         setErr('Tables not found — run the SQL schema first (see below)');
       } else if (missing && missing.error.code === '42703') {
-        setErr('A required column is missing in the schema: ' + (missing.error.message || 'branch_id is missing on a table')); 
+        setErr('A required column is missing in the schema: ' + (missing.error.message || 'branch_id is missing on a table'));
+      } else if (missing && missing.error.status === 401 || missing && /unauthorized/i.test(missing.error.message || '')) {
+        setErr('Unauthorized: check your Supabase URL and anon/public key.');
       } else if (missing) {
         setErr('Connection check failed: ' + (missing.error.message || missing.error.details || 'unknown'));
       } else {
@@ -217,6 +219,7 @@ function ConfigScreen({ onConnect }) {
           <div style={{fontSize:12,color:'var(--text3)',marginTop:'0.75rem'}}>
             The button above copies the full schema, including branches and expenses. Run it in Supabase if you haven’t already.
             If writes still fail, check Supabase table policies: anon/public key needs insert/update/select permission on `pos_branches`, `pos_products`, `pos_orders`, and `pos_expenses`.
+            A 401 Unauthorized means the URL or anon/public key is invalid for this project.
             For a quick setup, you can also run <code>alter table pos_branches disable row level security;</code> in Supabase.
           </div>
         </div>
