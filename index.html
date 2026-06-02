@@ -44,6 +44,8 @@
   }
   .top-nav { display:flex; align-items:center; gap:0; flex-wrap:wrap; row-gap:8px; background:var(--bg2); border-bottom:1px solid var(--border); padding:0 1rem; }
   .top-nav-title { font-size:18px; font-weight:700; margin-right:1.5rem; letter-spacing:-0.5px; display:flex; align-items:center; gap:8px; }
+  .tab-buttons { display:flex; gap:0; flex-wrap:wrap; }
+  .tab-select-wrapper { display:none; width:100%; }
   .pos-layout { display:flex; flex-wrap:wrap; overflow:hidden; flex:1; }
   .menu-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; border-right:1px solid var(--border); min-width:0; }
   .cart-panel { width:100%; max-width:340px; display:flex; flex-direction:column; background:var(--bg2); }
@@ -68,13 +70,32 @@
     .search-icon { left:10px; }
   }
   @media (max-width: 420px) {
+    .top-nav { padding:0.75rem 0.9rem; align-items:flex-start; }
     .top-nav button { flex:1 1 100%; }
     .top-nav-title { width:100%; }
+    .tab-buttons { display:none; }
+    .tab-select-wrapper { display:block; }
     .categories-row { gap:6px; }
     .CatChip { padding:6px 10px; font-size:12px; }
     .product-grid { grid-template-columns:1fr; }
     .payment-method-row button { flex:1 1 100%; }
     .small-button-row button { flex:1 1 100%; }
+    .menu-panel { order:1; padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+    .cart-panel {
+      order:2;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      max-width: 100%;
+      width: 100%;
+      border-radius: 16px 16px 0 0;
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -12px 40px rgba(0,0,0,0.45);
+      max-height: 74vh;
+      z-index: 30;
+    }
+    .cart-panel > div { width:100%; }
     .cart-empty-icon { font-size:28px; }
   }
   button { font-family: inherit; cursor: pointer; border: none; outline: none; }
@@ -648,15 +669,25 @@ function POSApp({ supabaseUrl, supabaseKey }) {
           <i className="bi bi-cup-fill" style={{fontSize:20}}></i>
           <span>Kape sa Harong</span>
         </div>
-        {[['pos','POS'],['reports','Reports'],['products','Products']].map(([id,label]) => (
-          <button key={id} onClick={() => setTab(id)}
-            style={{padding:'14px 18px',background:'none',color: tab===id ? 'var(--amber)' : 'var(--text2)',
-              fontWeight: tab===id ? 600 : 400, fontSize:14,
-              borderBottom: tab===id ? '2px solid var(--amber)' : '2px solid transparent',
-              transition:'color 0.15s'}}>
-            {label}
-          </button>
-        ))}
+        <div className="tab-buttons">
+          {[['pos','POS'],['reports','Reports'],['products','Products']].map(([id,label]) => (
+            <button key={id} onClick={() => setTab(id)}
+              style={{padding:'14px 18px',background:'none',color: tab===id ? 'var(--amber)' : 'var(--text2)',
+                fontWeight: tab===id ? 600 : 400, fontSize:14,
+                borderBottom: tab===id ? '2px solid var(--amber)' : '2px solid transparent',
+                transition:'color 0.15s'}}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="tab-select-wrapper">
+          <select value={tab} onChange={e => setTab(e.target.value)}
+            style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'10px 12px',borderRadius:8,fontSize:14}}>
+            {[['pos','POS'],['reports','Reports'],['products','Products']].map(([id,label]) => (
+              <option key={id} value={id}>{label}</option>
+            ))}
+          </select>
+        </div>
         <div style={{marginRight:12,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
           <select value={currentBranch} onChange={e => { setCurrentBranch(e.target.value); localStorage.setItem('pos_branch', e.target.value); }}
             style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'8px 10px',borderRadius:8,fontSize:13,flex:'1 1 160px',minWidth:0}}>
@@ -678,7 +709,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
 
       {/* POS Tab */}
       {tab === 'pos' && (
-        <div style={{flex:1,display:'flex',flexWrap:'wrap',overflow:'hidden'}}>
+        <div className="pos-layout" style={{flex:1,display:'flex',flexWrap:'wrap',overflow:'hidden'}}>
           {/* Left - Menu */}
           <div className="menu-panel">
             {/* Search + Categories */}
