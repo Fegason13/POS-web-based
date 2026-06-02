@@ -147,12 +147,14 @@ function ConfigScreen({ onConnect }) {
         client.from('pos_branches').select('id').limit(1),
         client.from('pos_categories').select('id').limit(1),
         client.from('pos_products').select('id').limit(1),
-        client.from('pos_orders').select('id').limit(1),
-        client.from('pos_expenses').select('id').limit(1),
+        client.from('pos_orders').select('id,branch_id').limit(1),
+        client.from('pos_expenses').select('id,branch_id').limit(1),
       ]);
       const missing = checks.find(r => r.error);
       if (missing && missing.error.code === '42P01') {
         setErr('Tables not found — run the SQL schema first (see below)');
+      } else if (missing && missing.error.code === '42703') {
+        setErr('A required column is missing in the schema: ' + (missing.error.message || 'branch_id is missing on a table')); 
       } else if (missing) {
         setErr('Connection check failed: ' + (missing.error.message || missing.error.details || 'unknown'));
       } else {
