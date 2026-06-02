@@ -42,46 +42,37 @@
     font-size: 15px;
     -webkit-font-smoothing: antialiased;
   }
-  .top-nav { display:flex; align-items:center; gap:0; flex-wrap:wrap; row-gap:8px; background:var(--bg2); border-bottom:1px solid var(--border); padding:0 1rem; }
-  .top-nav-title { font-size:18px; font-weight:700; margin-right:1.5rem; letter-spacing:-0.5px; display:flex; align-items:center; gap:8px; }
-  .pos-layout { display:flex; flex-wrap:wrap; overflow:hidden; flex:1; }
-  .menu-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; border-right:1px solid var(--border); min-width:0; }
-  .cart-panel { width:100%; max-width:340px; display:flex; flex-direction:column; background:var(--bg2); }
-  .product-grid { flex:1; overflow-y:auto; padding:12px; display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:10px; align-content:start; }
-  .search-input-wrapper { padding:12px; border-bottom:1px solid var(--border); background:var(--bg2); }
-  .search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text3); font-size:16px; }
-  .categories-row { display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; }
-  .cart-empty-icon { font-size:32px; margin-bottom:8px; }
-  .payment-method-row { padding:0 10px 10px; display:flex; gap:8px; flex-wrap:wrap; }
-  .payment-method-row button { flex:1 1 120px; }
-  .small-button-row { display:flex; gap:8px; flex-wrap:wrap; }
-  .responsive-grid-1 { grid-template-columns:1fr !important; }
-  @media (max-width: 600px) {
-    .top-nav { padding:0.5rem 0.75rem; }
-    .top-nav-title { margin-right:1rem; font-size:16px; }
-    .top-nav button { padding:10px 12px; font-size:13px; }
-    .menu-panel { border-right:none; }
-    .product-grid { grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); }
-    .cart-panel { max-width:100%; }
-    .cart-panel > div { width:100%; }
-    .search-input-wrapper { padding:10px; }
-    .search-icon { left:10px; }
-  }
-  @media (max-width: 420px) {
-    .top-nav button { flex:1 1 100%; }
-    .top-nav-title { width:100%; }
-    .categories-row { gap:6px; }
-    .CatChip { padding:6px 10px; font-size:12px; }
-    .product-grid { grid-template-columns:1fr; }
-    .payment-method-row button { flex:1 1 100%; }
-    .small-button-row button { flex:1 1 100%; }
-    .cart-empty-icon { font-size:28px; }
-  }
   button { font-family: inherit; cursor: pointer; border: none; outline: none; }
   input { font-family: inherit; outline: none; }
+  .top-nav { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 1rem; display:flex; align-items:center; gap:0; flex-wrap:wrap; row-gap:8px; }
+  .top-nav-title { font-size:18px; font-weight:700; margin-right:1.5rem; letter-spacing:-0.5px; display:flex; align-items:center; gap:8px; }
+  .tab-buttons { display:flex; gap:0; flex-wrap:wrap; }
+  .tab-button { padding:14px 18px; background:none; color:var(--text2); font-size:14px; font-weight:400; border:none; border-bottom:2px solid transparent; transition:color 0.15s; }
+  .tab-button.active { color:var(--amber); font-weight:600; border-bottom:2px solid var(--amber); }
+  .tab-select-wrapper { display:none; width:100%; }
+  .top-nav-right { margin-right:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .top-nav-date { font-size:12px; color:var(--text3); font-family:'DM Mono', monospace; }
+  .pos-layout { display:flex; flex-wrap:wrap; overflow:hidden; flex:1; position:relative; }
+  .menu-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; border-right:1px solid var(--border); min-width:0; }
+  .cart-panel { width:100%; max-width:340px; display:flex; flex-direction:column; background:var(--bg2); }
+  .cart-panel > div { width:100%; }
+  .top-select { width:100%; }
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+  @media (max-width: 420px) {
+    .top-nav { padding:0.75rem 0.9rem; align-items:flex-start; }
+    .top-nav-title { width:100%; }
+    .tab-buttons { display:none; }
+    .tab-select-wrapper { display:block; }
+    .top-nav-right { width:100%; }
+    .top-nav-right select, .top-nav-right button { width:100%; }
+    .menu-panel { order:1; padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+    .cart-panel { order:2; position: fixed; left: 0; right: 0; bottom: 0; width: 100%; max-width: 100%; border-radius: 16px 16px 0 0; border-top:1px solid var(--border); box-shadow: 0 -14px 38px rgba(0,0,0,0.35); max-height:72vh; z-index:25; }
+    .cart-panel > div { width:100%; }
+    .top-nav-date { margin-top:8px; }
+  }
 
   /* Print styles */
   @media print {
@@ -648,25 +639,30 @@ function POSApp({ supabaseUrl, supabaseKey }) {
           <i className="bi bi-cup-fill" style={{fontSize:20}}></i>
           <span>Kape sa Harong</span>
         </div>
-        {[['pos','POS'],['reports','Reports'],['products','Products']].map(([id,label]) => (
-          <button key={id} onClick={() => setTab(id)}
-            style={{padding:'14px 18px',background:'none',color: tab===id ? 'var(--amber)' : 'var(--text2)',
-              fontWeight: tab===id ? 600 : 400, fontSize:14,
-              borderBottom: tab===id ? '2px solid var(--amber)' : '2px solid transparent',
-              transition:'color 0.15s'}}>
-            {label}
-          </button>
-        ))}
-        <div style={{marginRight:12,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+        <div className="tab-buttons">
+          {[['pos','POS'],['reports','Reports'],['products','Products']].map(([id,label]) => (
+            <button key={id} onClick={() => setTab(id)} className={tab===id ? 'tab-button active' : 'tab-button'}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="tab-select-wrapper">
+          <select value={tab} onChange={e => setTab(e.target.value)} style={{width:'100%'}}>
+            {[['pos','POS'],['reports','Reports'],['products','Products']].map(([id,label]) => (
+              <option key={id} value={id}>{label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="top-nav-right">
           <select value={currentBranch} onChange={e => { setCurrentBranch(e.target.value); localStorage.setItem('pos_branch', e.target.value); }}
-            style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'8px 10px',borderRadius:8,fontSize:13,flex:'1 1 160px',minWidth:0}}>
+            style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'8px 10px',borderRadius:8,fontSize:13}}>
             {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             {branches.length === 0 && <option value="">No branches</option>}
           </select>
           <button onClick={() => setTab('products')}
             style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',padding:'6px 10px',borderRadius:8,fontSize:12}}>Manage</button>
         </div>
-        <div style={{fontSize:12,color:'var(--text3)',fontFamily:'DM Mono'}}>
+        <div className="top-nav-date">
           {new Date().toLocaleDateString('en-PH',{weekday:'short',year:'numeric',month:'short',day:'numeric'})}
         </div>
       </div>
@@ -678,28 +674,29 @@ function POSApp({ supabaseUrl, supabaseKey }) {
 
       {/* POS Tab */}
       {tab === 'pos' && (
-        <div style={{flex:1,display:'flex',flexWrap:'wrap',overflow:'hidden'}}>
+        <div className="pos-layout" style={{flex:1,display:'flex',flexWrap:'wrap',overflow:'hidden'}}>
           {/* Left - Menu */}
-          <div className="menu-panel">
+          <div className="menu-panel" style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',borderRight:'1px solid var(--border)',minWidth:0}}>
             {/* Search + Categories */}
             <div style={{padding:'12px',borderBottom:'1px solid var(--border)',background:'var(--bg2)'}}>
-              <div className="search-input-wrapper" style={{position:'relative',marginBottom:10}}>
-                <span className="search-icon"><i className="bi bi-search"></i></span>
+              <div style={{position:'relative',marginBottom:10}}>
+                <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:'var(--text3)',fontSize:16}}><i className="bi bi-search"></i></span>
                 <input value={search} onChange={e => setSearch(e.target.value)}
                   placeholder="Search menu…"
                   style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border2)',borderRadius:8,
                     padding:'9px 12px 9px 36px',color:'var(--text)',fontSize:14}} />
               </div>
-              <div className="categories-row" style={{display:'flex',gap:8,overflowX:'auto',paddingBottom:2}}>
-                <CatChip className="CatChip" active={activeCategory==='all'} onClick={() => setActiveCategory('all')} label="All" />
+              <div style={{display:'flex',gap:8,overflowX:'auto',paddingBottom:2}}>
+                <CatChip active={activeCategory==='all'} onClick={() => setActiveCategory('all')} label="All" />
                 {categories.map(c => (
-                  <CatChip key={c.id} className="CatChip" active={activeCategory===c.id} onClick={() => setActiveCategory(c.id)} label={<><UiIcon icon={c.icon} />{c.name}</>} />
+                  <CatChip key={c.id} active={activeCategory===c.id} onClick={() => setActiveCategory(c.id)} label={<><UiIcon icon={c.icon} />{c.name}</>} />
                 ))}
               </div>
             </div>
 
             {/* Product Grid */}
-            <div className="product-grid">
+            <div style={{flex:1,overflowY:'auto',padding:'12px',
+              display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(150px,1fr))',gap:10,alignContent:'start'}}>
               {filteredProducts.map(p => (
                 <ProductCard key={p.id} product={p} onAdd={() => addToCart(p)} />
               ))}
@@ -783,7 +780,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
 
             {paymentMethod === 'cash' && cart.length > 0 && (
               <div style={{padding:'0 10px 10px'}}>
-                <div className="small-button-row" style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:8}}>
+                <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:8}}>
                   {[100,200,300,400,500,1000].map(a => (
                     <button key={a} onClick={() => {
                       const s = parseFloat(a).toFixed(2);
@@ -1027,9 +1024,9 @@ function POSApp({ supabaseUrl, supabaseKey }) {
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-function CatChip({ active, onClick, label, className }) {
+function CatChip({ active, onClick, label }) {
   return (
-    <button className={className} onClick={onClick} style={{
+    <button onClick={onClick} style={{
       whiteSpace:'nowrap',padding:'6px 14px',borderRadius:20,fontSize:13,fontWeight: active ? 600 : 400,
       background: active ? 'var(--amber)' : 'var(--bg3)',
       color: active ? '#1a0f00' : 'var(--text2)',
