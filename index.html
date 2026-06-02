@@ -722,6 +722,24 @@ function POSApp({ supabaseUrl, supabaseKey }) {
 
             {paymentMethod === 'cash' && cart.length > 0 && (
               <div style={{padding:'0 10px 10px'}}>
+                <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:8}}>
+                  {[100,200,300,400,500,1000].map(a => (
+                    <button key={a} onClick={() => {
+                      const s = parseFloat(a).toFixed(2);
+                      setCashGiven(prev => (parseFloat(prev||0).toFixed(2) === s) ? '' : s);
+                    }}
+                      style={{padding:'8px 10px',borderRadius:8,fontSize:13,fontWeight:600,
+                        background: parseFloat(cashGiven||0) === a ? 'var(--amber)' : 'var(--bg3)',
+                        color: parseFloat(cashGiven||0) === a ? '#1a0f00' : 'var(--text2)',
+                        border: `1px solid ${parseFloat(cashGiven||0) === a ? 'var(--amber)' : 'var(--border)'}`}}>
+                      ₱{a}
+                    </button>
+                  ))}
+                  <button onClick={() => { const s = total.toFixed(2); setCashGiven(prev => (parseFloat(prev||0).toFixed(2) === s) ? '' : s); }}
+                    style={{padding:'8px 10px',borderRadius:8,fontSize:13,fontWeight:600,background: 'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)'}}>
+                    Exact Amount
+                  </button>
+                </div>
                 <input value={cashGiven} onChange={e => setCashGiven(e.target.value)} type="number"
                   placeholder="Cash given"
                   style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,
