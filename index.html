@@ -162,6 +162,8 @@ function ConfigScreen({ onConnect }) {
         setErr('Tables not found — run the SQL schema first (see below)');
       } else if (missing && missing.error.code === '42703') {
         setErr('A required column is missing in the schema: ' + (missing.error.message || 'branch_id is missing on a table'));
+      } else if (missing && /row-level security/i.test(missing.error.message || '') || missing && /policy/i.test(missing.error.message || '')) {
+        setErr('RLS blocked the request: disable row level security on pos_branches or add a policy that allows anon/public inserts.');
       } else if (missing && missing.error.status === 401 || missing && /unauthorized/i.test(missing.error.message || '')) {
         setErr('Unauthorized: check your Supabase URL and anon/public key.');
       } else if (missing) {
@@ -219,6 +221,7 @@ function ConfigScreen({ onConnect }) {
           <div style={{fontSize:12,color:'var(--text3)',marginTop:'0.75rem'}}>
             The button above copies the full schema, including branches and expenses. Run it in Supabase if you haven’t already.
             If writes still fail, check Supabase table policies: anon/public key needs insert/update/select permission on `pos_branches`, `pos_products`, `pos_orders`, and `pos_expenses`.
+            If you see “new row violates row-level security policy for table `pos_branches`”, disable row-level security on `pos_branches` or add a policy that permits anon/public inserts.
             A 401 Unauthorized means the URL or anon/public key is invalid for this project.
             For a quick setup, you can also run <code>alter table pos_branches disable row level security;</code> in Supabase.
           </div>
@@ -282,6 +285,20 @@ function POSApp({ supabaseUrl, supabaseKey }) {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [lastDbError, setLastDbError] = useState(null);
+  const [discounts, setDiscounts] = useState(() => {
+    try {
+      const raw = localStorage.getItem('pos_discounts');
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(parsed) && parsed.length) return parsed;
+    } catch (e) {}
+    return [
+      { id: 't20', name: '20% off', percent: 20 },
+      { id: 't15', name: '15% off', percent: 15 }
+    ];
+  });
+  const [selectedDiscountId, setSelectedDiscountId] = useState('');
+  const [discountModalOpen, setDiscountModalOpen] = useState(false);
+  const [editingDiscount, setEditingDiscount] = useState(null);
   const [branchSetupSaving, setBranchSetupSaving] = useState(false);
   const [branchSetupError, setBranchSetupError] = useState('');
 
@@ -304,7 +321,11 @@ function POSApp({ supabaseUrl, supabaseKey }) {
     const { data, error } = await db.from('pos_branches').insert({ name, address: address || null }).select().single();
     setBranchSetupSaving(false);
     if (error) {
-      setBranchSetupError(error.message || 'Could not create branch');
+      if (/row-level security/i.test(error.message || '') || /policy/i.test(error.message || '')) {
+        setBranchSetupError('Branch creation blocked by Supabase RLS: disable row-level security on pos_branches or add an insert policy for anon/public.');
+      } else {
+        setBranchSetupError(error.message || 'Could not create branch');
+      }
       return;
     }
     if (data?.id) {
@@ -382,10 +403,15 @@ function POSApp({ supabaseUrl, supabaseKey }) {
     });
   };
 
-  const clearCart = () => { setCart([]); setNote(''); setCashGiven(''); setPaymentMethod('cash'); };
+  const clearCart = () => { setCart([]); setNote(''); setCashGiven(''); setPaymentMethod('cash'); setSelectedDiscountId(''); };
 
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
-  const total = subtotal;
+  const appliedDiscount = (() => {
+    const d = discounts.find(x => x.id === selectedDiscountId);
+    return d ? Number(d.percent) : 0;
+  })();
+  const discountAmount = parseFloat((subtotal * (appliedDiscount / 100)).toFixed(2));
+  const total = parseFloat((subtotal - discountAmount).toFixed(2));
   const change = paymentMethod === 'cash' ? Math.max(0, parseFloat(cashGiven || 0) - total) : 0;
 
   // Checkout
@@ -397,8 +423,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
     const order = {
       items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
       subtotal: parseFloat(subtotal.toFixed(2)),
-    
-      discount: 0,
+      discount: parseFloat(discountAmount.toFixed(2)),
       total: parseFloat(total.toFixed(2)),
       payment_method: paymentMethod,
       note: note || null,
@@ -418,6 +443,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
     setCheckoutOpen(false);
     setReceiptOpen(true);
     clearCart();
+    setSelectedDiscountId('');
   };
 
   // Expenses CRUD
@@ -449,6 +475,34 @@ function POSApp({ supabaseUrl, supabaseKey }) {
     else { showToast('Deleted'); loadData(); }
   };
 
+  // Discounts: local-managed templates persisted to localStorage
+  useEffect(() => { try { localStorage.setItem('pos_discounts', JSON.stringify(discounts)); } catch(e){} }, [discounts]);
+
+  const openNewDiscount = () => { setEditingDiscount({ id: null, name: '', percent: '' }); setDiscountModalOpen(true); };
+
+  const saveDiscount = () => {
+    if (!editingDiscount || !editingDiscount.name || editingDiscount.percent === '' ) { showToast('Name and percent required','error'); return; }
+    const pct = parseFloat(editingDiscount.percent);
+    if (isNaN(pct) || pct < 0) { showToast('Percent must be a number','error'); return; }
+    if (editingDiscount.id) {
+      setDiscounts(prev => prev.map(d => d.id === editingDiscount.id ? { ...d, name: editingDiscount.name, percent: pct } : d));
+      showToast('Discount updated');
+    } else {
+      const id = Date.now().toString();
+      setDiscounts(prev => [...prev, { id, name: editingDiscount.name, percent: pct }]);
+      showToast('Discount added');
+    }
+    setDiscountModalOpen(false);
+    setEditingDiscount(null);
+  };
+
+  const deleteDiscount = (id) => {
+    if (!confirm('Delete this discount?')) return;
+    setDiscounts(prev => prev.filter(d => d.id !== id));
+    if (selectedDiscountId === id) setSelectedDiscountId('');
+    showToast('Discount deleted');
+  };
+
   const printReceipt = (order) => {
     const el = document.getElementById('print-area');
     el.style.display = 'block';
@@ -473,6 +527,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
         </div>`).join('')}
       <div style="border-top:1px dashed #000;margin:6px 0"></div>
       <div style="display:flex;justify-content:space-between;font-size:12px"><span>Subtotal</span><span>₱${parseFloat(order.subtotal).toFixed(2)}</span></div>
+      ${order.discount && parseFloat(order.discount) > 0 ? `<div style="display:flex;justify-content:space-between;font-size:12px"><span>Discount ${order.subtotal ? '(' + Math.round((order.discount / order.subtotal) * 100) + '%)' : ''}</span><span>-₱${parseFloat(order.discount).toFixed(2)}</span></div>` : ''}
       <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:bold;margin-top:4px"><span>TOTAL</span><span>₱${parseFloat(order.total).toFixed(2)}</span></div>
       ${order.change > 0 ? `<div style="display:flex;justify-content:space-between;font-size:12px"><span>Change</span><span>₱${parseFloat(order.change).toFixed(2)}</span></div>` : ''}
       ${order.note ? `<div style="font-size:11px;margin-top:6px">Note: ${order.note}</div>` : ''}
@@ -627,6 +682,24 @@ function POSApp({ supabaseUrl, supabaseKey }) {
             {/* Totals */}
             <div style={{padding:'10px 16px',borderTop:'1px solid var(--border)'}}>
               <Row label="Subtotal" value={`₱${subtotal.toFixed(2)}`} />
+              <div style={{display:'flex',alignItems:'center',gap:8,margin:'8px 0'}}>
+                <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                  {discounts.map(d => (
+                    <button key={d.id} onClick={() => setSelectedDiscountId(prev => prev === d.id ? '' : d.id)}
+                      style={{padding:'6px 10px',borderRadius:8,fontSize:12,fontWeight:600,
+                        background: selectedDiscountId === d.id ? 'var(--amber)' : 'var(--bg3)',
+                        color: selectedDiscountId === d.id ? '#1a0f00' : 'var(--text2)',
+                        border: `1px solid ${selectedDiscountId === d.id ? 'var(--amber)' : 'var(--border)'}`}}>
+                      {d.name}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => { setEditingDiscount(null); setDiscountModalOpen(true); }}
+                  style={{marginLeft:'auto',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',padding:'6px 10px',borderRadius:8,fontSize:12}}>Manage discounts</button>
+              </div>
+              {appliedDiscount > 0 && (
+                <Row label={`Discount (${appliedDiscount}%)`} value={`-₱${discountAmount.toFixed(2)}`} muted={false} />
+              )}
               <div style={{display:'flex',justifyContent:'space-between',fontWeight:700,fontSize:18,
                 margin:'8px 0',color:'var(--amber)'}}>
                 <span>Total</span><span>₱{total.toFixed(2)}</span>
@@ -829,6 +902,45 @@ function POSApp({ supabaseUrl, supabaseKey }) {
             <button onClick={() => { setExpenseModalOpen(false); setEditingExpense(null); }} style={{flex:1,padding:'10px',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',borderRadius:8}}>Cancel</button>
             <button onClick={saveExpense} style={{flex:1,padding:'10px',background:'var(--amber)',color:'#1a0f00',borderRadius:8,fontWeight:700}}>Save</button>
           </div>
+        </Modal>
+      )}
+      {discountModalOpen && (
+        <Modal onClose={() => { setDiscountModalOpen(false); setEditingDiscount(null); }}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+            <div style={{fontWeight:700,fontSize:18}}>{editingDiscount && editingDiscount.id ? 'Edit Discount' : 'Manage Discounts'}</div>
+            <button onClick={openNewDiscount} style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',padding:'6px 10px',borderRadius:8}}>+ New</button>
+          </div>
+          <div style={{marginBottom:10}}>
+            {discounts.length === 0 && <div style={{color:'var(--text3)'}}>No discounts defined.</div>}
+            {discounts.map(d => (
+              <div key={d.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
+                <div>
+                  <div style={{fontWeight:600}}>{d.name}</div>
+                  <div style={{fontSize:12,color:'var(--text3)'}}>{d.percent}%</div>
+                </div>
+                <div style={{display:'flex',gap:8}}>
+                  <button onClick={() => { setEditingDiscount(d); setDiscountModalOpen(true); }} style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',padding:'6px 10px',borderRadius:8}}>Edit</button>
+                  <button onClick={() => deleteDiscount(d.id)} style={{background:'var(--red-bg)',border:'1px solid var(--red)',color:'var(--red)',padding:'6px 10px',borderRadius:8}}>Del</button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {editingDiscount && (
+            <>
+              <div style={{marginBottom:8}}>
+                <label style={{display:'block',fontSize:12,color:'var(--text2)',marginBottom:6}}>Name</label>
+                <input value={editingDiscount?.name || ''} onChange={e => setEditingDiscount(se => ({...(se||{}), name: e.target.value}))} style={inputStyle} />
+              </div>
+              <div style={{marginBottom:12}}>
+                <label style={{display:'block',fontSize:12,color:'var(--text2)',marginBottom:6}}>Percent</label>
+                <input value={editingDiscount?.percent || ''} onChange={e => setEditingDiscount(se => ({...(se||{}), percent: e.target.value}))} type="number" style={inputStyle} />
+              </div>
+              <div style={{display:'flex',gap:10}}>
+                <button onClick={() => { setDiscountModalOpen(false); setEditingDiscount(null); }} style={{flex:1,padding:'10px',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',borderRadius:8}}>Cancel</button>
+                <button onClick={saveDiscount} style={{flex:1,padding:'10px',background:'var(--amber)',color:'#1a0f00',borderRadius:8,fontWeight:700}}>Save</button>
+              </div>
+            </>
+          )}
         </Modal>
       )}
     </div>
