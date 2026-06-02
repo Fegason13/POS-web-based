@@ -69,7 +69,15 @@ const { useState, useEffect, useCallback, useMemo, useRef } = React;
 
 // ── Supabase SQL schema (run once in your Supabase SQL editor) ──────────────
 const SCHEMA_SQL = `
--- Categories
+-- Branches (stores)
+create table if not exists pos_branches (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  address text,
+  created_at timestamptz default now()
+);
+
+-- Categories (global)
 create table if not exists pos_categories (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -78,9 +86,10 @@ create table if not exists pos_categories (
   created_at timestamptz default now()
 );
 
--- Products
+-- Products (per-branch)
 create table if not exists pos_products (
   id uuid primary key default gen_random_uuid(),
+  branch_id uuid references pos_branches(id) on delete cascade,
   category_id uuid references pos_categories(id) on delete set null,
   name text not null,
   price numeric(10,2) not null,
@@ -89,9 +98,10 @@ create table if not exists pos_products (
   created_at timestamptz default now()
 );
 
--- Orders
+-- Orders (per-branch)
 create table if not exists pos_orders (
   id uuid primary key default gen_random_uuid(),
+  branch_id uuid references pos_branches(id) on delete cascade,
   order_number serial,
   items jsonb not null,
   subtotal numeric(10,2) not null,
@@ -104,7 +114,16 @@ create table if not exists pos_orders (
   created_at timestamptz default now()
 );
 
--- Sample data
+-- Expenses (per-branch cash going out)
+create table if not exists pos_expenses (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid references pos_branches(id) on delete cascade,
+  amount numeric(10,2) not null,
+  description text,
+  created_at timestamptz default now()
+);
+
+-- Sample categories
 insert into pos_categories (name, icon, sort_order) values
   ('Coffee', '☕', 1), ('Tea', '🍵', 2), ('Pastries', '🥐', 3),
   ('Sandwiches', '🥪', 4), ('Cold Drinks', '🧃', 5)
@@ -209,11 +228,15 @@ const var_radius = 'var(--radius)';
 // ── Main POS App ─────────────────────────────────────────────────────────────
 function POSApp({ supabaseUrl, supabaseKey }) {
   const db = useMemo(() => supabase.createClient(supabaseUrl, supabaseKey), [supabaseUrl, supabaseKey]);
-
   const [tab, setTab] = useState('pos'); // pos | reports | products
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [currentBranch, setCurrentBranch] = useState(localStorage.getItem('pos_branch') || '');
+  const [expenses, setExpenses] = useState([]);
+  const [editingExpense, setEditingExpense] = useState(null);
+  const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState([]);
@@ -238,16 +261,44 @@ function POSApp({ supabaseUrl, supabaseKey }) {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [{ data: cats }, { data: prods }, { data: ords }] = await Promise.all([
+    // load branches first
+    const { data: bdata } = await db.from('pos_branches').select('*').order('name');
+    const branchList = bdata || [];
+    setBranches(branchList);
+    // ensure currentBranch is set
+    let branchId = currentBranch;
+    if (!branchId && branchList.length) {
+      branchId = branchList[0].id;
+      setCurrentBranch(branchId);
+      localStorage.setItem('pos_branch', branchId);
+    }
+
+    const proms = [
       db.from('pos_categories').select('*').order('sort_order'),
-      db.from('pos_products').select('*').order('name'),
-      db.from('pos_orders').select('*').order('created_at', { ascending: false }).limit(200),
-    ]);
+    ];
+    // products, orders and expenses filtered by branch
+    if (branchId) {
+      proms.push(db.from('pos_products').select('*').eq('branch_id', branchId).order('name'));
+      proms.push(db.from('pos_orders').select('*').eq('branch_id', branchId).order('created_at', { ascending: false }).limit(200));
+      proms.push(db.from('pos_expenses').select('*').eq('branch_id', branchId).order('created_at', { ascending: false }).limit(200));
+    } else {
+      proms.push(db.from('pos_products').select('*').order('name'));
+      proms.push(db.from('pos_orders').select('*').order('created_at', { ascending: false }).limit(200));
+      proms.push(db.from('pos_expenses').select('*').order('created_at', { ascending: false }).limit(200));
+    }
+
+    const results = await Promise.all(proms);
+    const cats = results[0].data;
+    const prods = results[1].data;
+    const ords = results[2].data;
+    const exps = results[3].data;
+
     setCategories(cats || []);
     setProducts(prods || []);
     setOrders(ords || []);
+    setExpenses(exps || []);
     setLoading(false);
-  }, [db]);
+  }, [db, currentBranch]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -288,6 +339,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
       total: parseFloat(total.toFixed(2)),
       payment_method: paymentMethod,
       note: note || null,
+      branch_id: currentBranch || null,
     };
     const { data, error } = await db.from('pos_orders').insert(order).select().single();
     if (error) { showToast('Failed to save order', 'error'); return; }
@@ -296,6 +348,29 @@ function POSApp({ supabaseUrl, supabaseKey }) {
     setCheckoutOpen(false);
     setReceiptOpen(true);
     clearCart();
+  };
+
+  // Expenses CRUD
+  const openNewExpense = () => { setEditingExpense({ amount:'', description:'' }); setExpenseModalOpen(true); };
+
+  const saveExpense = async () => {
+    if (!editingExpense || !editingExpense.amount) { showToast('Amount required','error'); return; }
+    const payload = { branch_id: currentBranch || null, amount: parseFloat(editingExpense.amount), description: editingExpense.description || null };
+    let res;
+    if (editingExpense.id) {
+      res = await db.from('pos_expenses').update(payload).eq('id', editingExpense.id).select().single();
+    } else {
+      res = await db.from('pos_expenses').insert(payload).select().single();
+    }
+    if (res.error) { showToast('Failed to save expense','error'); }
+    else { showToast('Expense saved'); setExpenseModalOpen(false); setEditingExpense(null); loadData(); }
+  };
+
+  const deleteExpense = async (id) => {
+    if (!confirm('Delete this expense?')) return;
+    const { error } = await db.from('pos_expenses').delete().eq('id', id);
+    if (error) { showToast('Failed to delete','error'); }
+    else { showToast('Deleted'); loadData(); }
   };
 
   const printReceipt = (order) => {
@@ -386,7 +461,15 @@ function POSApp({ supabaseUrl, supabaseKey }) {
             {label}
           </button>
         ))}
-        <div style={{flex:1}} />
+        <div style={{marginRight:12,display:'flex',alignItems:'center',gap:8}}>
+          <select value={currentBranch} onChange={e => { setCurrentBranch(e.target.value); localStorage.setItem('pos_branch', e.target.value); }}
+            style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'8px 10px',borderRadius:8,fontSize:13}}>
+            {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            {branches.length === 0 && <option value="">No branches</option>}
+          </select>
+          <button onClick={() => setTab('products')}
+            style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',padding:'6px 10px',borderRadius:8,fontSize:12}}>Manage</button>
+        </div>
         <div style={{fontSize:12,color:'var(--text3)',fontFamily:'DM Mono'}}>
           {new Date().toLocaleDateString('en-PH',{weekday:'short',year:'numeric',month:'short',day:'numeric'})}
         </div>
@@ -511,17 +594,62 @@ function POSApp({ supabaseUrl, supabaseKey }) {
       {/* Reports Tab */}
       {tab === 'reports' && (
         <div style={{flex:1,overflowY:'auto',padding:'1.5rem'}}>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12,marginBottom:'1.5rem'}}>
-            <StatCard label="Today's Revenue" value={`₱${todayRevenue.toFixed(2)}`} sub={`${todayOrders.length} orders`} color="var(--amber)" />
-            <StatCard label="All-Time Revenue" value={`₱${totalRevenue.toFixed(2)}`} sub={`${orders.length} total orders`} color="var(--green)" />
-            {Object.entries(paymentBreakdown).map(([method, total]) => (
-              <StatCard key={method} label={method.charAt(0).toUpperCase()+method.slice(1)} value={`₱${total.toFixed(2)}`} sub="payment method" color="var(--blue)" />
-            ))}
-          </div>
+          {(() => {
+            const todayCashSales = todayOrders.filter(o => (o.payment_method||'').toLowerCase() === 'cash').reduce((s,o) => s + parseFloat(o.total || 0), 0);
+            const todayExpenses = expenses.filter(e => new Date(e.created_at).toDateString() === new Date().toDateString());
+            const todayExpensesTotal = todayExpenses.reduce((s,e) => s + parseFloat(e.amount || 0), 0);
+            const cashOnHand = todayCashSales - todayExpensesTotal;
+            return (
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12,marginBottom:'1.5rem'}}>
+                <StatCard label="Today's Revenue" value={`₱${todayRevenue.toFixed(2)}`} sub={`${todayOrders.length} orders`} color="var(--amber)" />
+                <StatCard label="All-Time Revenue" value={`₱${totalRevenue.toFixed(2)}`} sub={`${orders.length} total orders`} color="var(--green)" />
+                <StatCard label="Cash On Hand" value={`₱${cashOnHand.toFixed(2)}`} sub={`Cash sales ₱${todayCashSales.toFixed(2)} · Expenses ₱${todayExpensesTotal.toFixed(2)}`} color="var(--green)" />
+                {Object.entries(paymentBreakdown).map(([method, total]) => (
+                  <StatCard key={method} label={method.charAt(0).toUpperCase()+method.slice(1)} value={`₱${total.toFixed(2)}`} sub="payment method" color="var(--blue)" />
+                ))}
+              </div>
+            );
+          })()}
 
           <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:var_radius,overflow:'hidden'}}>
             <div style={{padding:'14px 16px',borderBottom:'1px solid var(--border)',fontWeight:600,fontSize:14}}>
               Recent Orders
+            </div>
+            <div style={{padding:'12px 16px',borderBottom:'1px solid var(--border)'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div style={{fontWeight:600}}>Expenses</div>
+                <div style={{display:'flex',gap:8}}>
+                  <button onClick={openNewExpense} style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',padding:'6px 10px',borderRadius:8}}>+ Add Expense</button>
+                </div>
+              </div>
+              <div style={{marginTop:10}}>
+                <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                  <thead>
+                    <tr style={{background:'var(--bg3)'}}>
+                      <th style={{padding:'8px 10px',textAlign:'left',color:'var(--text2)'}}>Amount</th>
+                      <th style={{padding:'8px 10px',textAlign:'left',color:'var(--text2)'}}>Description</th>
+                      <th style={{padding:'8px 10px',textAlign:'left',color:'var(--text2)'}}>Date</th>
+                      <th style={{padding:'8px 10px',textAlign:'right',color:'var(--text2)'}}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {expenses.map(exp => (
+                      <tr key={exp.id} style={{borderTop:'1px solid var(--border)'}}>
+                        <td style={{padding:'8px 10px'}}>₱{parseFloat(exp.amount).toFixed(2)}</td>
+                        <td style={{padding:'8px 10px',color:'var(--text2)'}}>{exp.description}</td>
+                        <td style={{padding:'8px 10px',color:'var(--text3)'}}>{new Date(exp.created_at).toLocaleString()}</td>
+                        <td style={{padding:'8px 10px',textAlign:'right'}}>
+                          <button onClick={() => { setEditingExpense(exp); setExpenseModalOpen(true); }} style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',padding:'4px 8px',borderRadius:6,marginRight:6}}>Edit</button>
+                          <button onClick={() => deleteExpense(exp.id)} style={{background:'var(--red-bg)',border:'1px solid var(--red)',color:'var(--red)',padding:'4px 8px',borderRadius:6}}>Del</button>
+                        </td>
+                      </tr>
+                    ))}
+                    {expenses.length === 0 && (
+                      <tr><td colSpan={4} style={{padding:'10px',color:'var(--text3)'}}>No expenses</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
             <div style={{overflowX:'auto'}}>
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
@@ -559,7 +687,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
 
       {/* Products Tab */}
       {tab === 'products' && (
-        <ProductsManager db={db} categories={categories} products={products} onRefresh={loadData} showToast={showToast} />
+        <ProductsManager db={db} categories={categories} products={products} onRefresh={loadData} showToast={showToast} currentBranch={currentBranch} />
       )}
 
       {/* Receipt Modal */}
@@ -601,6 +729,23 @@ function POSApp({ supabaseUrl, supabaseKey }) {
                 borderRadius:10,fontWeight:700,fontSize:14}}>
               New Order
             </button>
+          </div>
+        </Modal>
+      )}
+      {expenseModalOpen && (
+        <Modal onClose={() => { setExpenseModalOpen(false); setEditingExpense(null); }}>
+          <div style={{fontWeight:700,fontSize:18,marginBottom:8}}>{editingExpense && editingExpense.id ? 'Edit Expense' : 'Add Expense'}</div>
+          <div style={{marginBottom:8}}>
+            <label style={{display:'block',fontSize:12,color:'var(--text2)',marginBottom:6}}>Amount (₱)</label>
+            <input value={editingExpense?.amount || ''} onChange={e => setEditingExpense(se => ({...(se||{}), amount: e.target.value}))} type="number" style={inputStyle} />
+          </div>
+          <div style={{marginBottom:12}}>
+            <label style={{display:'block',fontSize:12,color:'var(--text2)',marginBottom:6}}>Description</label>
+            <input value={editingExpense?.description || ''} onChange={e => setEditingExpense(se => ({...(se||{}), description: e.target.value}))} style={inputStyle} />
+          </div>
+          <div style={{display:'flex',gap:10}}>
+            <button onClick={() => { setExpenseModalOpen(false); setEditingExpense(null); }} style={{flex:1,padding:'10px',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',borderRadius:8}}>Cancel</button>
+            <button onClick={saveExpense} style={{flex:1,padding:'10px',background:'var(--amber)',color:'#1a0f00',borderRadius:8,fontWeight:700}}>Save</button>
           </div>
         </Modal>
       )}
@@ -695,12 +840,14 @@ function Modal({ children, onClose }) {
 }
 
 // ── Products Manager ──────────────────────────────────────────────────────────
-function ProductsManager({ db, categories, products, onRefresh, showToast }) {
+function ProductsManager({ db, categories, products, onRefresh, showToast, currentBranch }) {
   const [form, setForm] = useState({ name:'', price:'', category_id:'', icon:'🍽️', available:true });
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [catForm, setCatForm] = useState({ name:'', icon:'☕' });
   const [showCatForm, setShowCatForm] = useState(false);
+  const [branchesList, setBranchesList] = useState([]);
+  const [branchForm, setBranchForm] = useState({ name:'', address:'' });
 
   const ICONS = ['☕','🍵','🥐','🥪','🧃','🍰','🍳','🥗','🍜','🫖','🧋','🍹','🥤','🍮','🍩','🍔','🌯','🥙'];
 
@@ -708,6 +855,7 @@ function ProductsManager({ db, categories, products, onRefresh, showToast }) {
     if (!form.name || !form.price) { showToast('Name and price required','error'); return; }
     setSaving(true);
     const data = { name: form.name, price: parseFloat(form.price), category_id: form.category_id || null, available: form.available };
+    if (currentBranch) data.branch_id = currentBranch;
     const op = editing
       ? db.from('pos_products').update(data).eq('id', editing)
       : db.from('pos_products').insert(data);
@@ -732,6 +880,25 @@ function ProductsManager({ db, categories, products, onRefresh, showToast }) {
     if (!catForm.name) return;
     await db.from('pos_categories').insert({ name: catForm.name, icon: catForm.icon, sort_order: categories.length+1 });
     setCatForm({name:'',icon:'☕'}); setShowCatForm(false); onRefresh();
+  };
+
+  const loadBranches = async () => {
+    const { data } = await db.from('pos_branches').select('*').order('name');
+    setBranchesList(data || []);
+  };
+
+  useEffect(() => { loadBranches(); }, []);
+
+  const saveBranch = async () => {
+    if (!branchForm.name) return;
+    await db.from('pos_branches').insert({ name: branchForm.name, address: branchForm.address });
+    setBranchForm({ name:'', address:'' }); loadBranches(); onRefresh();
+  };
+
+  const deleteBranch = async (id) => {
+    if (!confirm('Delete branch? This will remove branch products and data.')) return;
+    await db.from('pos_branches').delete().eq('id', id);
+    loadBranches(); onRefresh();
   };
 
   const editProduct = (p) => {
@@ -799,6 +966,28 @@ function ProductsManager({ db, categories, products, onRefresh, showToast }) {
                 {c.icon} {c.name}
               </span>
             ))}
+          </div>
+          
+          <div style={{marginTop:'1rem',borderTop:'1px dashed var(--border)',paddingTop:'1rem'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.75rem'}}>
+              <div style={{fontWeight:600,fontSize:15}}>Branches</div>
+            </div>
+            <div style={{display:'flex',gap:8,marginBottom:'0.75rem'}}>
+              <input placeholder="Branch name" value={branchForm.name} onChange={e => setBranchForm(b=>({...b,name:e.target.value}))} style={{...inputStyle,flex:1}} />
+              <input placeholder="Address" value={branchForm.address} onChange={e => setBranchForm(b=>({...b,address:e.target.value}))} style={{...inputStyle,flex:1}} />
+              <button onClick={saveBranch} style={{background:'var(--amber)',color:'#1a0f00',padding:'8px 12px',borderRadius:8,fontWeight:600}}>Add</button>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {branchesList.map(b => (
+                <div key={b.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'6px 8px',background:'var(--bg3)',borderRadius:8}}>
+                  <div style={{fontSize:13}}>{b.name} <span style={{color:'var(--text3)',fontSize:12}}>· {b.address || '—'}</span></div>
+                  <div style={{display:'flex',gap:8}}>
+                    <button onClick={() => { navigator.clipboard && navigator.clipboard.writeText(b.id); showToast('Branch id copied'); }} style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',padding:'4px 8px',borderRadius:6}}>Copy ID</button>
+                    <button onClick={() => deleteBranch(b.id)} style={{background:'var(--red-bg)',border:'1px solid var(--red)',color:'var(--red)',padding:'4px 8px',borderRadius:6}}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
