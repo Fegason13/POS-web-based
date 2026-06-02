@@ -42,6 +42,41 @@
     font-size: 15px;
     -webkit-font-smoothing: antialiased;
   }
+  .top-nav { display:flex; align-items:center; gap:0; flex-wrap:wrap; row-gap:8px; background:var(--bg2); border-bottom:1px solid var(--border); padding:0 1rem; }
+  .top-nav-title { font-size:18px; font-weight:700; margin-right:1.5rem; letter-spacing:-0.5px; display:flex; align-items:center; gap:8px; }
+  .pos-layout { display:flex; flex-wrap:wrap; overflow:hidden; flex:1; }
+  .menu-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; border-right:1px solid var(--border); min-width:0; }
+  .cart-panel { width:100%; max-width:340px; display:flex; flex-direction:column; background:var(--bg2); }
+  .product-grid { flex:1; overflow-y:auto; padding:12px; display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:10px; align-content:start; }
+  .search-input-wrapper { padding:12px; border-bottom:1px solid var(--border); background:var(--bg2); }
+  .search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text3); font-size:16px; }
+  .categories-row { display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; }
+  .cart-empty-icon { font-size:32px; margin-bottom:8px; }
+  .payment-method-row { padding:0 10px 10px; display:flex; gap:8px; flex-wrap:wrap; }
+  .payment-method-row button { flex:1 1 120px; }
+  .small-button-row { display:flex; gap:8px; flex-wrap:wrap; }
+  .responsive-grid-1 { grid-template-columns:1fr !important; }
+  @media (max-width: 600px) {
+    .top-nav { padding:0.5rem 0.75rem; }
+    .top-nav-title { margin-right:1rem; font-size:16px; }
+    .top-nav button { padding:10px 12px; font-size:13px; }
+    .menu-panel { border-right:none; }
+    .product-grid { grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); }
+    .cart-panel { max-width:100%; }
+    .cart-panel > div { width:100%; }
+    .search-input-wrapper { padding:10px; }
+    .search-icon { left:10px; }
+  }
+  @media (max-width: 420px) {
+    .top-nav button { flex:1 1 100%; }
+    .top-nav-title { width:100%; }
+    .categories-row { gap:6px; }
+    .CatChip { padding:6px 10px; font-size:12px; }
+    .product-grid { grid-template-columns:1fr; }
+    .payment-method-row button { flex:1 1 100%; }
+    .small-button-row button { flex:1 1 100%; }
+    .cart-empty-icon { font-size:28px; }
+  }
   button { font-family: inherit; cursor: pointer; border: none; outline: none; }
   input { font-family: inherit; outline: none; }
   ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -608,9 +643,8 @@ function POSApp({ supabaseUrl, supabaseKey }) {
       )}
 
       {/* Top nav */}
-      <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border)',padding:'0 1rem',
-        display:'flex',alignItems:'center',gap:0,flexShrink:0,flexWrap:'wrap',rowGap:8}}>
-        <div style={{fontSize:18,fontWeight:700,marginRight:'1.5rem',letterSpacing:'-0.5px',display:'flex',alignItems:'center',gap:8}}>
+      <div className="top-nav">
+        <div className="top-nav-title">
           <i className="bi bi-cup-fill" style={{fontSize:20}}></i>
           <span>Kape sa Harong</span>
         </div>
@@ -623,9 +657,9 @@ function POSApp({ supabaseUrl, supabaseKey }) {
             {label}
           </button>
         ))}
-        <div style={{marginRight:12,display:'flex',alignItems:'center',gap:8}}>
+        <div style={{marginRight:12,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
           <select value={currentBranch} onChange={e => { setCurrentBranch(e.target.value); localStorage.setItem('pos_branch', e.target.value); }}
-            style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'8px 10px',borderRadius:8,fontSize:13}}>
+            style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'8px 10px',borderRadius:8,fontSize:13,flex:'1 1 160px',minWidth:0}}>
             {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             {branches.length === 0 && <option value="">No branches</option>}
           </select>
@@ -646,27 +680,26 @@ function POSApp({ supabaseUrl, supabaseKey }) {
       {tab === 'pos' && (
         <div style={{flex:1,display:'flex',flexWrap:'wrap',overflow:'hidden'}}>
           {/* Left - Menu */}
-          <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',borderRight:'1px solid var(--border)',minWidth:0}}>
+          <div className="menu-panel">
             {/* Search + Categories */}
             <div style={{padding:'12px',borderBottom:'1px solid var(--border)',background:'var(--bg2)'}}>
-              <div style={{position:'relative',marginBottom:10}}>
-                <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:'var(--text3)',fontSize:16}}><i className="bi bi-search"></i></span>
+              <div className="search-input-wrapper" style={{position:'relative',marginBottom:10}}>
+                <span className="search-icon"><i className="bi bi-search"></i></span>
                 <input value={search} onChange={e => setSearch(e.target.value)}
                   placeholder="Search menu…"
                   style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border2)',borderRadius:8,
                     padding:'9px 12px 9px 36px',color:'var(--text)',fontSize:14}} />
               </div>
-              <div style={{display:'flex',gap:8,overflowX:'auto',paddingBottom:2}}>
-                <CatChip active={activeCategory==='all'} onClick={() => setActiveCategory('all')} label="All" />
+              <div className="categories-row" style={{display:'flex',gap:8,overflowX:'auto',paddingBottom:2}}>
+                <CatChip className="CatChip" active={activeCategory==='all'} onClick={() => setActiveCategory('all')} label="All" />
                 {categories.map(c => (
-                  <CatChip key={c.id} active={activeCategory===c.id} onClick={() => setActiveCategory(c.id)} label={<><UiIcon icon={c.icon} />{c.name}</>} />
+                  <CatChip key={c.id} className="CatChip" active={activeCategory===c.id} onClick={() => setActiveCategory(c.id)} label={<><UiIcon icon={c.icon} />{c.name}</>} />
                 ))}
               </div>
             </div>
 
             {/* Product Grid */}
-            <div style={{flex:1,overflowY:'auto',padding:'12px',
-              display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(150px,1fr))',gap:10,alignContent:'start'}}>
+            <div className="product-grid">
               {filteredProducts.map(p => (
                 <ProductCard key={p.id} product={p} onAdd={() => addToCart(p)} />
               ))}
@@ -679,7 +712,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
           </div>
 
           {/* Right - Cart */}
-          <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',background:'var(--bg2)'}}>
+          <div className="cart-panel" style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',background:'var(--bg2)'}}>
             <div style={{padding:'14px 16px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
               <div style={{fontWeight:600,fontSize:15}}>Current Order</div>
               {cart.length > 0 && (
@@ -750,7 +783,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
 
             {paymentMethod === 'cash' && cart.length > 0 && (
               <div style={{padding:'0 10px 10px'}}>
-                <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:8}}>
+                <div className="small-button-row" style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:8}}>
                   {[100,200,300,400,500,1000].map(a => (
                     <button key={a} onClick={() => {
                       const s = parseFloat(a).toFixed(2);
@@ -994,9 +1027,9 @@ function POSApp({ supabaseUrl, supabaseKey }) {
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-function CatChip({ active, onClick, label }) {
+function CatChip({ active, onClick, label, className }) {
   return (
-    <button onClick={onClick} style={{
+    <button className={className} onClick={onClick} style={{
       whiteSpace:'nowrap',padding:'6px 14px',borderRadius:20,fontSize:13,fontWeight: active ? 600 : 400,
       background: active ? 'var(--amber)' : 'var(--bg3)',
       color: active ? '#1a0f00' : 'var(--text2)',
