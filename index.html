@@ -609,9 +609,9 @@ function POSApp({ supabaseUrl, supabaseKey }) {
 
       {/* Top nav */}
       <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border)',padding:'0 1rem',
-        display:'flex',alignItems:'center',gap:0,flexShrink:0}}>
+        display:'flex',alignItems:'center',gap:0,flexShrink:0,flexWrap:'wrap',rowGap:8}}>
         <div style={{fontSize:18,fontWeight:700,marginRight:'1.5rem',letterSpacing:'-0.5px',display:'flex',alignItems:'center',gap:8}}>
-          <i style={{fontSize:20}}></i>
+          <i className="bi bi-cup-fill" style={{fontSize:20}}></i>
           <span>Kape sa Harong</span>
         </div>
         {[['pos','POS'],['reports','Reports'],['products','Products']].map(([id,label]) => (
@@ -644,9 +644,9 @@ function POSApp({ supabaseUrl, supabaseKey }) {
 
       {/* POS Tab */}
       {tab === 'pos' && (
-        <div style={{flex:1,display:'flex',overflow:'hidden'}}>
+        <div style={{flex:1,display:'flex',flexWrap:'wrap',overflow:'hidden'}}>
           {/* Left - Menu */}
-          <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',borderRight:'1px solid var(--border)'}}>
+          <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',borderRight:'1px solid var(--border)',minWidth:0}}>
             {/* Search + Categories */}
             <div style={{padding:'12px',borderBottom:'1px solid var(--border)',background:'var(--bg2)'}}>
               <div style={{position:'relative',marginBottom:10}}>
@@ -679,7 +679,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
           </div>
 
           {/* Right - Cart */}
-          <div style={{width:340,display:'flex',flexDirection:'column',background:'var(--bg2)'}}>
+          <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',background:'var(--bg2)'}}>
             <div style={{padding:'14px 16px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
               <div style={{fontWeight:600,fontSize:15}}>Current Order</div>
               {cart.length > 0 && (
@@ -735,10 +735,10 @@ function POSApp({ supabaseUrl, supabaseKey }) {
             </div>
 
             {/* Payment method */}
-            <div style={{padding:'0 10px 10px',display:'flex',gap:8}}>
+            <div style={{padding:'0 10px 10px',display:'flex',gap:8,flexWrap:'wrap'}}>
               {[['cash','bi-cash-stack','Cash'],['card','bi-credit-card','Card'],['gcash','bi-phone','GCash'],['maya','bi-wallet','Maya']].map(([k,icon,label]) => (
                 <button key={k} onClick={() => setPaymentMethod(k)}
-                  style={{flex:1,padding:'8px 4px',borderRadius:8,fontSize:11,fontWeight:500,
+                  style={{flex:'1 1 120px',padding:'8px 4px',borderRadius:8,fontSize:11,fontWeight:500,
                     background: paymentMethod===k ? 'var(--amber)' : 'var(--bg3)',
                     color: paymentMethod===k ? '#1a0f00' : 'var(--text2)',
                     border:`1px solid ${paymentMethod===k ? 'var(--amber)' : 'var(--border)'}`,
