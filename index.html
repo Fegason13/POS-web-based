@@ -217,6 +217,34 @@ function ConfigScreen({ onConnect }) {
   );
 }
 
+function BranchSetupScreen({ onCreateBranch, saving, error }) {
+  const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
+  return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:'2rem',background:'var(--bg)'}}>
+      <div style={{width:'100%',maxWidth:520}}>
+        <div style={{marginBottom:'2.5rem'}}>
+          <div style={{fontSize:32,fontWeight:700,letterSpacing:'-1px',marginBottom:6}}>Create your first branch</div>
+          <div style={{color:'var(--text2)',fontSize:14}}>A branch is required before you can use the POS dashboard.</div>
+        </div>
+        <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:var_radius,padding:'1.5rem'}}>
+          <label style={{display:'block',fontSize:13,color:'var(--text2)',marginBottom:6}}>Branch Name</label>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Main Store"
+            style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border2)',borderRadius:8,padding:'10px 12px',color:'var(--text)',fontSize:14,marginBottom:'1rem'}} />
+          <label style={{display:'block',fontSize:13,color:'var(--text2)',marginBottom:6}}>Address (optional)</label>
+          <input value={address} onChange={e => setAddress(e.target.value)} placeholder="Store address"
+            style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border2)',borderRadius:8,padding:'10px 12px',color:'var(--text)',fontSize:14,marginBottom:'1rem'}} />
+          {error && <div style={{color:'var(--red)',fontSize:13,marginBottom:10}}>{error}</div>}
+          <button onClick={() => onCreateBranch({ name: name.trim(), address: address.trim() })} disabled={saving || !name.trim()}
+            style={{width:'100%',marginTop:'1rem',background:'var(--amber)',color:'#1a0f00',padding:'12px',borderRadius:8,fontWeight:600,fontSize:15,opacity:saving || !name.trim() ? 0.7 : 1}}>
+            {saving ? 'Creating branch…' : 'Create branch'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const var_radius = 'var(--radius)';
 
 // ── Main POS App ─────────────────────────────────────────────────────────────
@@ -243,6 +271,8 @@ function POSApp({ supabaseUrl, supabaseKey }) {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [lastDbError, setLastDbError] = useState(null);
+  const [branchSetupSaving, setBranchSetupSaving] = useState(false);
+  const [branchSetupError, setBranchSetupError] = useState('');
 
   const CAFE_NAME = 'My Café';
   const CAFE_ADDRESS = '123 Main Street';
@@ -253,14 +283,37 @@ function POSApp({ supabaseUrl, supabaseKey }) {
     setTimeout(() => setToast(null), 2500);
   };
 
-  const loadData = useCallback(async () => {
+  const createBranch = async ({ name, address }) => {
+    if (!name) {
+      setBranchSetupError('Branch name is required');
+      return;
+    }
+    setBranchSetupSaving(true);
+    setBranchSetupError('');
+    const { data, error } = await db.from('pos_branches').insert({ name, address: address || null }).select().single();
+    setBranchSetupSaving(false);
+    if (error) {
+      setBranchSetupError(error.message || 'Could not create branch');
+      return;
+    }
+    if (data?.id) {
+      const branchId = data.id;
+      setCurrentBranch(branchId);
+      localStorage.setItem('pos_branch', branchId);
+      setTab('pos');
+      loadData(branchId);
+      showToast('Branch created');
+    }
+  };
+
+  const loadData = useCallback(async (overrideBranchId) => {
     setLoading(true);
     // load branches first
     const { data: bdata } = await db.from('pos_branches').select('*').order('name');
     const branchList = bdata || [];
     setBranches(branchList);
     // ensure currentBranch points to a valid branch
-    let branchId = currentBranch;
+    let branchId = overrideBranchId || currentBranch;
     if (!branchId || !branchList.some(b => b.id === branchId)) {
       if (branchList.length) {
         branchId = branchList[0].id;
@@ -446,6 +499,10 @@ function POSApp({ supabaseUrl, supabaseKey }) {
       <div style={{color:'var(--text2)',fontSize:14}}>Loading…</div>
     </div>
   );
+
+  if (!loading && branches.length === 0) {
+    return <BranchSetupScreen onCreateBranch={createBranch} saving={branchSetupSaving} error={branchSetupError} />;
+  }
 
   return (
     <div style={{height:'100vh',display:'flex',flexDirection:'column',overflow:'hidden'}}>
