@@ -143,11 +143,18 @@ function ConfigScreen({ onConnect }) {
     setTesting(true); setErr('');
     try {
       const client = supabase.createClient(url.trim(), key.trim());
-      const { error } = await client.from('pos_categories').select('id').limit(1);
-      if (error && error.code === '42P01') {
+      const checks = await Promise.all([
+        client.from('pos_branches').select('id').limit(1),
+        client.from('pos_categories').select('id').limit(1),
+        client.from('pos_products').select('id').limit(1),
+        client.from('pos_orders').select('id').limit(1),
+        client.from('pos_expenses').select('id').limit(1),
+      ]);
+      const missing = checks.find(r => r.error);
+      if (missing && missing.error.code === '42P01') {
         setErr('Tables not found — run the SQL schema first (see below)');
-      } else if (error) {
-        setErr('Connection check failed: ' + (error?.message || error?.details || 'unknown'));
+      } else if (missing) {
+        setErr('Connection check failed: ' + (missing.error.message || missing.error.details || 'unknown'));
       } else {
         localStorage.setItem('sb_url', url.trim());
         localStorage.setItem('sb_key', key.trim());
@@ -196,28 +203,11 @@ function ConfigScreen({ onConnect }) {
             </button>
           </div>
           <pre style={{fontFamily:'DM Mono',fontSize:11,color:'var(--text3)',overflowX:'auto',whiteSpace:'pre-wrap',lineHeight:1.6}}>
-{`create table pos_categories (
-  id uuid primary key default gen_random_uuid(),
-  name text not null, icon text default '☕',
-  sort_order int default 0, created_at timestamptz default now()
-);
-create table pos_products (
-  id uuid primary key default gen_random_uuid(),
-  category_id uuid references pos_categories(id),
-  name text not null, price numeric(10,2) not null,
-  available boolean default true, created_at timestamptz default now()
-);
-create table pos_orders (
-  id uuid primary key default gen_random_uuid(),
-  order_number serial, items jsonb not null,
-  subtotal numeric(10,2) not null, tax numeric(10,2) not null,
-  discount numeric(10,2) default 0, total numeric(10,2) not null,
-  payment_method text not null, status text default 'completed',
-  note text, created_at timestamptz default now()
-);`}
+            {SCHEMA_SQL}
           </pre>
           <div style={{fontSize:12,color:'var(--text3)',marginTop:'0.75rem'}}>
             The button above copies the full schema, including branches and expenses. Run it in Supabase if you haven’t already.
+            If writes still fail, check Supabase table policies: anon/public key needs insert/update permission on `pos_orders` and `pos_expenses`.
           </div>
         </div>
       </div>
@@ -250,6 +240,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [lastDbError, setLastDbError] = useState(null);
 
   const TAX_RATE = 0.12;
   const CAFE_NAME = 'My Café';
@@ -351,10 +342,13 @@ function POSApp({ supabaseUrl, supabaseKey }) {
     };
     const { data, error } = await db.from('pos_orders').insert(order).select().single();
     if (error) {
+      const msg = 'Failed to save order: ' + (error.message || error.details || JSON.stringify(error));
       console.error('Order insert failed', error);
-      showToast('Failed to save order: ' + (error?.message || error?.details || 'unknown'), 'error');
+      setLastDbError(msg);
+      showToast(msg, 'error');
       return;
     }
+    setLastDbError(null);
     setLastOrder({ ...data, items: cart, change });
     setOrders(prev => [data, ...prev]);
     setCheckoutOpen(false);
@@ -375,9 +369,12 @@ function POSApp({ supabaseUrl, supabaseKey }) {
       res = await db.from('pos_expenses').insert(payload).select().single();
     }
     if (res.error) {
+      const msg = 'Failed to save expense: ' + (res.error.message || res.error.details || JSON.stringify(res.error));
       console.error('Expense save failed', res.error);
-      showToast('Failed to save expense: ' + (res.error?.message || res.error?.details || 'unknown'), 'error');
+      setLastDbError(msg);
+      showToast(msg, 'error');
     } else {
+      setLastDbError(null);
       showToast('Expense saved'); setExpenseModalOpen(false); setEditingExpense(null); loadData(); }
   };
 
@@ -489,6 +486,11 @@ function POSApp({ supabaseUrl, supabaseKey }) {
           {new Date().toLocaleDateString('en-PH',{weekday:'short',year:'numeric',month:'short',day:'numeric'})}
         </div>
       </div>
+      {lastDbError && (
+        <div style={{background:'rgba(224,85,85,0.14)',color:'var(--red)',padding:'10px 16px',fontSize:13,borderTop:'1px solid rgba(224,85,85,0.25)'}}>
+          <strong>Database error:</strong> {lastDbError}
+        </div>
+      )}
 
       {/* POS Tab */}
       {tab === 'pos' && (
