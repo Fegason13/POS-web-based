@@ -129,7 +129,12 @@ insert into pos_categories (name, icon, sort_order) values
   ('Sandwiches', '🥪', 4), ('Cold Drinks', '🧃', 5)
 on conflict do nothing;
 
+-- Disable row level security on all app tables so anon/public key can write through Supabase
 alter table pos_branches disable row level security;
+alter table pos_categories disable row level security;
+alter table pos_products disable row level security;
+alter table pos_orders disable row level security;
+alter table pos_expenses disable row level security;
 `;
 
 // ── Config component ─────────────────────────────────────────────────────────
