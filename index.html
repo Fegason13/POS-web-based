@@ -146,6 +146,8 @@ function ConfigScreen({ onConnect }) {
       const { error } = await client.from('pos_categories').select('id').limit(1);
       if (error && error.code === '42P01') {
         setErr('Tables not found — run the SQL schema first (see below)');
+      } else if (error) {
+        setErr('Connection check failed: ' + (error?.message || error?.details || 'unknown'));
       } else {
         localStorage.setItem('sb_url', url.trim());
         localStorage.setItem('sb_key', key.trim());
@@ -215,7 +217,7 @@ create table pos_orders (
 );`}
           </pre>
           <div style={{fontSize:12,color:'var(--text3)',marginTop:'0.75rem'}}>
-            Then add your products from the Products tab inside the POS.
+            The button above copies the full schema, including branches and expenses. Run it in Supabase if you haven’t already.
           </div>
         </div>
       </div>
@@ -265,12 +267,18 @@ function POSApp({ supabaseUrl, supabaseKey }) {
     const { data: bdata } = await db.from('pos_branches').select('*').order('name');
     const branchList = bdata || [];
     setBranches(branchList);
-    // ensure currentBranch is set
+    // ensure currentBranch points to a valid branch
     let branchId = currentBranch;
-    if (!branchId && branchList.length) {
-      branchId = branchList[0].id;
-      setCurrentBranch(branchId);
-      localStorage.setItem('pos_branch', branchId);
+    if (!branchId || !branchList.some(b => b.id === branchId)) {
+      if (branchList.length) {
+        branchId = branchList[0].id;
+        setCurrentBranch(branchId);
+        localStorage.setItem('pos_branch', branchId);
+      } else {
+        branchId = '';
+        setCurrentBranch('');
+        localStorage.removeItem('pos_branch');
+      }
     }
 
     const proms = [
@@ -342,7 +350,11 @@ function POSApp({ supabaseUrl, supabaseKey }) {
       branch_id: currentBranch || null,
     };
     const { data, error } = await db.from('pos_orders').insert(order).select().single();
-    if (error) { showToast('Failed to save order', 'error'); return; }
+    if (error) {
+      console.error('Order insert failed', error);
+      showToast('Failed to save order: ' + (error?.message || error?.details || 'unknown'), 'error');
+      return;
+    }
     setLastOrder({ ...data, items: cart, change });
     setOrders(prev => [data, ...prev]);
     setCheckoutOpen(false);
@@ -362,8 +374,11 @@ function POSApp({ supabaseUrl, supabaseKey }) {
     } else {
       res = await db.from('pos_expenses').insert(payload).select().single();
     }
-    if (res.error) { showToast('Failed to save expense','error'); }
-    else { showToast('Expense saved'); setExpenseModalOpen(false); setEditingExpense(null); loadData(); }
+    if (res.error) {
+      console.error('Expense save failed', res.error);
+      showToast('Failed to save expense: ' + (res.error?.message || res.error?.details || 'unknown'), 'error');
+    } else {
+      showToast('Expense saved'); setExpenseModalOpen(false); setEditingExpense(null); loadData(); }
   };
 
   const deleteExpense = async (id) => {
@@ -1066,3 +1081,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
 </body>
 </html>
+ 
