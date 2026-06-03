@@ -13,50 +13,57 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #0f0f0f;
-    --bg2: #1a1a1a;
-    --bg3: #222;
-    --bg4: #2a2a2a;
-    --border: #333;
-    --border2: #444;
-    --text: #f0ede8;
-    --text2: #a09890;
-    --text3: #6a6360;
-    --amber: #e8a130;
-    --amber2: #c47e10;
-    --amber-bg: rgba(232,161,48,0.1);
-    --green: #4caf7d;
-    --green-bg: rgba(76,175,125,0.1);
-    --red: #e05555;
-    --red-bg: rgba(224,85,85,0.1);
-    --blue: #5b8dee;
-    --blue-bg: rgba(91,141,238,0.1);
-    --radius: 12px;
-    --radius-sm: 8px;
+    --bg: #1b120d;
+    --bg2: #241a15;
+    --bg3: #2f231d;
+    --bg4: #3b2f28;
+    --border: #3f2e28;
+    --border2: #4c382f;
+    --text: #f1e9e1;
+    --text2: #bfa892;
+    --text3: #938370;
+    --amber: #c19560;
+    --amber2: #a07a47;
+    --amber-bg: rgba(193,149,96,0.14);
+    --green: #7ca28a;
+    --green-bg: rgba(124,162,138,0.14);
+    --red: #d06969;
+    --red-bg: rgba(208,105,105,0.14);
+    --blue: #7f95b0;
+    --blue-bg: rgba(127,149,176,0.12);
+    --radius: 14px;
+    --radius-sm: 10px;
   }
   html, body, #root { height: 100%; }
   body {
     font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
+    background: linear-gradient(135deg, #1b120d, #1f1511 35%, #241612);
     color: var(--text);
     font-size: 15px;
     -webkit-font-smoothing: antialiased;
   }
   button { font-family: inherit; cursor: pointer; border: none; outline: none; }
   input { font-family: inherit; outline: none; }
-  .top-nav { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 1rem; display:flex; align-items:center; gap:0; flex-wrap:wrap; row-gap:8px; }
+  .top-nav { background: rgba(36,26,21,0.96); border-bottom: 1px solid rgba(255,255,255,0.06); padding: 0 1rem; display:flex; align-items:center; gap:0; flex-wrap:wrap; row-gap:8px; backdrop-filter: blur(10px); }
   .top-nav-title { font-size:18px; font-weight:700; margin-right:1.5rem; letter-spacing:-0.5px; display:flex; align-items:center; gap:8px; }
   .tab-buttons { display:flex; gap:0; flex-wrap:wrap; }
-  .tab-button { padding:14px 18px; background:none; color:var(--text2); font-size:14px; font-weight:400; border:none; border-bottom:2px solid transparent; transition:color 0.15s; }
+  .tab-button { padding:14px 18px; background:none; color:var(--text2); font-size:14px; font-weight:400; border:none; border-bottom:2px solid transparent; transition:color 0.15s, border-color 0.15s; }
+  .tab-button:hover { color:var(--text); }
   .tab-button.active { color:var(--amber); font-weight:600; border-bottom:2px solid var(--amber); }
   .tab-select-wrapper { display:none; width:100%; }
   .top-nav-right { margin-right:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .mobile-menu-toggle { display:none; background: var(--bg3); border: 1px solid var(--border); color: var(--text2); border-radius: 10px; padding: 8px 10px; }
+  .mobile-nav-panel { display:flex; gap:8px; align-items:center; width:100%; }
+  .mobile-nav-panel.open { display:flex; }
   .top-nav-date { font-size:12px; color:var(--text3); font-family:'DM Mono', monospace; }
   .pos-layout { display:flex; flex-wrap:wrap; overflow:hidden; flex:1; position:relative; }
-  .menu-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; border-right:1px solid var(--border); min-width:0; }
-  .cart-panel { width:100%; max-width:340px; display:flex; flex-direction:column; background:var(--bg2); }
+  .menu-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; border-right:1px solid rgba(255,255,255,0.06); min-width:0; background: rgba(24,17,13,0.85); }
+  .cart-panel { width:100%; max-width:340px; display:flex; flex-direction:column; background: rgba(36,26,21,0.88); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04); }
   .cart-panel > div { width:100%; }
   .top-select { width:100%; }
+  button { font-family: inherit; cursor: pointer; border: none; outline: none; background: transparent; color: inherit; }
+  button:hover { opacity: 0.92; }
+  input, select { font-family: inherit; outline: none; color: var(--text); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
@@ -66,33 +73,27 @@
     .top-nav-title { width:100%; }
     .tab-buttons { display:none; }
     .tab-select-wrapper { display:block; }
-    .top-nav-right { width:100%; }
-    .top-nav-right select, .top-nav-right button { width:100%; }
+    .mobile-menu-toggle { display:inline-flex; }
+    .top-nav-right { display:none; width:100%; }
+    .top-nav-date { display:none; }
+    .mobile-nav-panel { display:none; flex-direction:column; align-items:flex-start; gap:10px; }
+    .mobile-nav-panel.open { display:flex; }
+    .mobile-nav-panel .top-nav-right { display:flex; width:100%; }
+    .mobile-nav-panel .top-nav-right select, .mobile-nav-panel .top-nav-right button { width:100%; }
+    .mobile-nav-panel .top-nav-date { display:block; width:100%; }
     .menu-panel { order:1; padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
     .cart-panel { order:2; position: fixed; left: 0; right: 0; bottom: 0; width: 100%; max-width: 100%; border-radius: 16px 16px 0 0; border-top:1px solid var(--border); box-shadow: 0 -14px 38px rgba(0,0,0,0.35); max-height:72vh; z-index:25; }
     .cart-panel > div { width:100%; }
-    .top-nav-date { margin-top:8px; }
   }
 
   /* Print styles */
-  @media print {
-    body * { visibility: hidden; }
-    #print-area, #print-area * { visibility: visible; }
-    #print-area {
-      position: fixed; top: 0; left: 0; width: 80mm;
-      background: white; color: black;
-      font-family: 'Courier New', monospace;
-      font-size: 12px; padding: 8mm;
-    }
-  }
-</style>
+  </style>
 </head>
 <body>
 <div id="root"></div>
-<div id="print-area" style="display:none"></div>
 
 <script type="text/babel">
-const { useState, useEffect, useCallback, useMemo, useRef } = React;
+const { useState, useEffect, useCallback, useMemo } = React;
 
 // ── Supabase SQL schema (run once in your Supabase SQL editor) ──────────────
 const SCHEMA_SQL = `
@@ -299,7 +300,10 @@ function POSApp({ supabaseUrl, supabaseKey }) {
   const [currentBranch, setCurrentBranch] = useState(localStorage.getItem('pos_branch') || '');
   const [expenses, setExpenses] = useState([]);
   const [editingExpense, setEditingExpense] = useState(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);
+  const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState([]);
@@ -312,6 +316,14 @@ function POSApp({ supabaseUrl, supabaseKey }) {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [lastDbError, setLastDbError] = useState(null);
+  const [manualCashOnHand, setManualCashOnHand] = useState(() => {
+    try {
+      const stored = localStorage.getItem('manualCashOnHand');
+      return stored !== null ? parseFloat(stored) : null;
+    } catch (e) { return null; }
+  });
+  const [editingCashOnHand, setEditingCashOnHand] = useState(false);
+  const [cashOnHandInput, setCashOnHandInput] = useState('');
   const [discounts, setDiscounts] = useState(() => {
     try {
       const raw = localStorage.getItem('pos_discounts');
@@ -323,11 +335,22 @@ function POSApp({ supabaseUrl, supabaseKey }) {
       { id: 't15', name: '15% off', percent: 15 }
     ];
   });
+
+  useEffect(() => {
+    try {
+      if (manualCashOnHand === null) localStorage.removeItem('manualCashOnHand');
+      else localStorage.setItem('manualCashOnHand', manualCashOnHand.toString());
+    } catch (e) {}
+  }, [manualCashOnHand]);
   const [selectedDiscountId, setSelectedDiscountId] = useState('');
   const [discountModalOpen, setDiscountModalOpen] = useState(false);
   const [editingDiscount, setEditingDiscount] = useState(null);
   const [branchSetupSaving, setBranchSetupSaving] = useState(false);
   const [branchSetupError, setBranchSetupError] = useState('');
+  const [printerDevice, setPrinterDevice] = useState(null);
+  const [printerCharacteristic, setPrinterCharacteristic] = useState(null);
+  const [printerConnecting, setPrinterConnecting] = useState(false);
+  const [printerError, setPrinterError] = useState('');
 
   const CAFE_NAME = 'Kape sa Harong';
   const CAFE_ADDRESS = 'CAL Courtyard';
@@ -336,6 +359,138 @@ function POSApp({ supabaseUrl, supabaseKey }) {
   const showToast = (msg, type='success') => {
     setToast({msg,type});
     setTimeout(() => setToast(null), 2500);
+  };
+
+  const resetPrinter = () => {
+    setPrinterDevice(null);
+    setPrinterCharacteristic(null);
+    setPrinterConnecting(false);
+    setPrinterError('');
+  };
+
+  const disconnectPrinter = () => {
+    try {
+      if (printerDevice?.gatt?.connected) printerDevice.gatt.disconnect();
+    } catch (e) {
+      console.warn('Bluetooth disconnect failed', e);
+    }
+    resetPrinter();
+    showToast('Bluetooth printer disconnected');
+  };
+
+  const connectPrinter = async () => {
+    if (!navigator.bluetooth) {
+      showToast('Bluetooth is not available in this browser', 'error');
+      return;
+    }
+    setPrinterError('');
+    setPrinterConnecting(true);
+    try {
+      const device = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: [
+          '0000ffe0-0000-1000-8000-00805f9b34fb',
+          '000018f0-0000-1000-8000-00805f9b34fb'
+        ]
+      });
+      device.addEventListener('gattserverdisconnected', () => {
+        showToast('Bluetooth printer disconnected', 'error');
+        resetPrinter();
+      });
+      const server = await device.gatt.connect();
+      const serviceCandidates = ['0000ffe0-0000-1000-8000-00805f9b34fb', '000018f0-0000-1000-8000-00805f9b34fb'];
+      let service = null;
+      for (const sid of serviceCandidates) {
+        try { service = await server.getPrimaryService(sid); break; } catch (err) {}
+      }
+      if (!service) {
+        const services = await server.getPrimaryServices();
+        if (services.length) service = services[0];
+      }
+      if (!service) throw new Error('No printer service found');
+      const characteristicCandidates = ['0000ffe1-0000-1000-8000-00805f9b34fb', '00002a19-0000-1000-8000-00805f9b34fb'];
+      let characteristic = null;
+      for (const cid of characteristicCandidates) {
+        try { characteristic = await service.getCharacteristic(cid); break; } catch (err) {}
+      }
+      if (!characteristic) {
+        const characteristics = await service.getCharacteristics();
+        if (characteristics.length > 0) characteristic = characteristics[0];
+      }
+      if (!characteristic) throw new Error('No writable printer characteristic found');
+      setPrinterDevice(device);
+      setPrinterCharacteristic(characteristic);
+      showToast(`Bluetooth printer connected: ${device.name || 'Printer'}`);
+    } catch (err) {
+      console.error('Bluetooth printer connect failed', err);
+      setPrinterError(err.message || 'Connection failed');
+      resetPrinter();
+      showToast(`Bluetooth connect failed: ${err.message || err}`, 'error');
+    }
+  };
+
+  const chunkWrite = async (characteristic, data) => {
+    const MTU = 20;
+    for (let i = 0; i < data.length; i += MTU) {
+      const chunk = data.slice(i, i + MTU);
+      await characteristic.writeValue(chunk);
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+  };
+
+  const buildBluetoothReceipt = (order) => {
+    const date = new Date(order.created_at || Date.now());
+    const lines = [
+      CAFE_NAME,
+      CAFE_ADDRESS,
+      `Tel: ${CAFE_TEL}`,
+      '--------------------------------',
+      `Order #: ${order.order_number || order.id?.slice(-6).toUpperCase()}`,
+      `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`,
+      `Payment: ${(order.payment_method || '').toUpperCase()}`,
+      '--------------------------------',
+      ...((order.items || []).map(i => {
+        const itemLine = `${i.name} x${i.qty}`;
+        const priceLine = `₱${(i.price * i.qty).toFixed(2)}`;
+        return itemLine.padEnd(28, ' ') + priceLine;
+      })),
+      '--------------------------------',
+      `Subtotal: ₱${parseFloat(order.subtotal).toFixed(2)}`,
+      order.discount && parseFloat(order.discount) > 0 ? `Discount: -₱${parseFloat(order.discount).toFixed(2)}` : null,
+      `TOTAL: ₱${parseFloat(order.total).toFixed(2)}`,
+      order.change > 0 ? `Change: ₱${parseFloat(order.change).toFixed(2)}` : null,
+      order.note ? `Note: ${order.note}` : null,
+      '--------------------------------',
+      'Thank you! Come again',
+      '\n\n\n'
+    ];
+    return lines.filter(Boolean).join('\n');
+  };
+
+  const sendBluetoothReceipt = async (order) => {
+    if (!printerCharacteristic) {
+      throw new Error('No connected Bluetooth printer');
+    }
+    const receiptText = buildBluetoothReceipt(order);
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(receiptText);
+    await chunkWrite(printerCharacteristic, bytes);
+  };
+
+  const printReceipt = async (order) => {
+    try {
+      if (!printerCharacteristic || !printerDevice?.gatt?.connected) {
+        await connectPrinter();
+      }
+      if (!printerCharacteristic) {
+        throw new Error('Printer not connected');
+      }
+      await sendBluetoothReceipt(order);
+      showToast('Receipt sent to Bluetooth printer');
+    } catch (err) {
+      console.error('Bluetooth print failed', err);
+      showToast(`Bluetooth print failed: ${err.message || err}`, 'error');
+    }
   };
 
   const createBranch = async ({ name, address }) => {
@@ -465,12 +620,50 @@ function POSApp({ supabaseUrl, supabaseKey }) {
       return;
     }
     setLastDbError(null);
-    setLastOrder({ ...data, items: cart, change });
+    const savedOrder = { ...data, items: cart, change };
+    setLastOrder(savedOrder);
     setOrders(prev => [data, ...prev]);
     setCheckoutOpen(false);
     setReceiptOpen(true);
+    printReceipt(savedOrder);
     clearCart();
     setSelectedDiscountId('');
+  };
+
+  const openEditOrder = (order) => {
+    setEditingOrder({ ...order, note: order.note || '', payment_method: order.payment_method || 'cash' });
+    setOrderModalOpen(true);
+  };
+
+  const saveOrder = async () => {
+    if (!editingOrder) return;
+    const payload = {
+      payment_method: editingOrder.payment_method,
+      note: editingOrder.note || null,
+    };
+    const { data, error } = await db.from('pos_orders').update(payload).eq('id', editingOrder.id).select().single();
+    if (error) {
+      const msg = 'Failed to update order: ' + (error.message || error.details || JSON.stringify(error));
+      console.error('Order update failed', error);
+      setLastDbError(msg);
+      showToast(msg, 'error');
+      return;
+    }
+    setOrders(prev => prev.map(o => o.id === data.id ? { ...o, ...data } : o));
+    setOrderModalOpen(false);
+    setEditingOrder(null);
+    showToast('Order updated');
+  };
+
+  const voidOrder = async (id) => {
+    if (!confirm('Void this order? This will exclude it from totals.')) return;
+    const { data, error } = await db.from('pos_orders').update({ status: 'voided' }).eq('id', id).select().single();
+    if (error) {
+      showToast('Failed to void order','error');
+    } else {
+      setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'voided' } : o));
+      showToast('Order voided');
+    }
   };
 
   // Expenses CRUD
@@ -487,7 +680,8 @@ function POSApp({ supabaseUrl, supabaseKey }) {
       .reduce((s,o) => s + parseFloat(o.total || 0), 0);
     const todayExpensesSum = expenses.filter(e => new Date(e.created_at).toDateString() === today)
       .reduce((s,e) => s + parseFloat(e.amount || 0), 0);
-    let availableCash = todayCashSales - todayExpensesSum;
+    const cashOnHandValue = todayCashSales - todayExpensesSum;
+    let availableCash = cashOnHandValue;
 
     // If editing an existing expense for today, allow increasing up to (availableCash + originalAmount)
     if (editingExpense.id) {
@@ -554,41 +748,6 @@ function POSApp({ supabaseUrl, supabaseKey }) {
     showToast('Discount deleted');
   };
 
-  const printReceipt = (order) => {
-    const el = document.getElementById('print-area');
-    el.style.display = 'block';
-    const date = new Date(order.created_at || Date.now());
-    el.innerHTML = `
-      <div style="text-align:center;margin-bottom:8px">
-        <div style="font-size:16px;font-weight:bold">${CAFE_NAME}</div>
-        <div style="font-size:11px">${CAFE_ADDRESS}</div>
-        <div style="font-size:11px">Tel: ${CAFE_TEL}</div>
-      </div>
-      <div style="border-top:1px dashed #000;margin:6px 0"></div>
-      <div style="font-size:11px">
-        <div>Order #: ${order.order_number || order.id?.slice(-6).toUpperCase()}</div>
-        <div>${date.toLocaleDateString()} ${date.toLocaleTimeString()}</div>
-        <div>Payment: ${(order.payment_method||'').toUpperCase()}</div>
-      </div>
-      <div style="border-top:1px dashed #000;margin:6px 0"></div>
-      ${(order.items||[]).map(i => `
-        <div style="display:flex;justify-content:space-between;font-size:12px">
-          <span>${i.name} x${i.qty}</span>
-          <span>₱${(i.price * i.qty).toFixed(2)}</span>
-        </div>`).join('')}
-      <div style="border-top:1px dashed #000;margin:6px 0"></div>
-      <div style="display:flex;justify-content:space-between;font-size:12px"><span>Subtotal</span><span>₱${parseFloat(order.subtotal).toFixed(2)}</span></div>
-      ${order.discount && parseFloat(order.discount) > 0 ? `<div style="display:flex;justify-content:space-between;font-size:12px"><span>Discount ${order.subtotal ? '(' + Math.round((order.discount / order.subtotal) * 100) + '%)' : ''}</span><span>-₱${parseFloat(order.discount).toFixed(2)}</span></div>` : ''}
-      <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:bold;margin-top:4px"><span>TOTAL</span><span>₱${parseFloat(order.total).toFixed(2)}</span></div>
-      ${order.change > 0 ? `<div style="display:flex;justify-content:space-between;font-size:12px"><span>Change</span><span>₱${parseFloat(order.change).toFixed(2)}</span></div>` : ''}
-      ${order.note ? `<div style="font-size:11px;margin-top:6px">Note: ${order.note}</div>` : ''}
-      <div style="border-top:1px dashed #000;margin:6px 0"></div>
-      <div style="text-align:center;font-size:11px">Thank you! Come again</div>
-    `;
-    window.print();
-    el.style.display = 'none';
-  };
-
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
       const matchCat = activeCategory === 'all' || p.category_id === activeCategory;
@@ -598,17 +757,24 @@ function POSApp({ supabaseUrl, supabaseKey }) {
   }, [products, activeCategory, search]);
 
   // Reports helpers
+  const activeOrders = useMemo(() => orders.filter(o => (o.status || 'completed') !== 'voided'), [orders]);
   const todayOrders = useMemo(() => {
     const today = new Date().toDateString();
-    return orders.filter(o => new Date(o.created_at).toDateString() === today);
-  }, [orders]);
+    return activeOrders.filter(o => new Date(o.created_at).toDateString() === today);
+  }, [activeOrders]);
   const todayRevenue = todayOrders.reduce((s, o) => s + parseFloat(o.total), 0);
-  const totalRevenue = orders.reduce((s, o) => s + parseFloat(o.total), 0);
+  const totalRevenue = activeOrders.reduce((s, o) => s + parseFloat(o.total), 0);
+  const now = new Date();
+  const monthlyOrders = activeOrders.filter(o => {
+    const d = new Date(o.created_at);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+  const monthlyRevenue = monthlyOrders.reduce((s, o) => s + parseFloat(o.total), 0);
   const paymentBreakdown = useMemo(() => {
     const map = {};
-    orders.forEach(o => { map[o.payment_method] = (map[o.payment_method] || 0) + parseFloat(o.total); });
+    activeOrders.forEach(o => { map[o.payment_method] = (map[o.payment_method] || 0) + parseFloat(o.total); });
     return map;
-  }, [orders]);
+  }, [activeOrders]);
 
   if (loading) return (
     <div style={{height:'100vh',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:12}}>
@@ -639,6 +805,9 @@ function POSApp({ supabaseUrl, supabaseKey }) {
           <i className="bi bi-cup-fill" style={{fontSize:20}}></i>
           <span>Kape sa Harong</span>
         </div>
+        <button className="mobile-menu-toggle" onClick={() => setMobileNavOpen(open => !open)}>
+          <i className="bi bi-list" style={{fontSize:16}}></i>
+        </button>
         <div className="tab-buttons">
           {[['pos','POS'],['reports','Reports'],['products','Products']].map(([id,label]) => (
             <button key={id} onClick={() => setTab(id)} className={tab===id ? 'tab-button active' : 'tab-button'}>
@@ -653,17 +822,27 @@ function POSApp({ supabaseUrl, supabaseKey }) {
             ))}
           </select>
         </div>
-        <div className="top-nav-right">
-          <select value={currentBranch} onChange={e => { setCurrentBranch(e.target.value); localStorage.setItem('pos_branch', e.target.value); }}
-            style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'8px 10px',borderRadius:8,fontSize:13}}>
-            {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            {branches.length === 0 && <option value="">No branches</option>}
-          </select>
-          <button onClick={() => setTab('products')}
-            style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',padding:'6px 10px',borderRadius:8,fontSize:12}}>Manage</button>
-        </div>
-        <div className="top-nav-date">
-          {new Date().toLocaleDateString('en-PH',{weekday:'short',year:'numeric',month:'short',day:'numeric'})}
+        <div className={mobileNavOpen ? 'mobile-nav-panel open' : 'mobile-nav-panel'}>
+          <div className="top-nav-right">
+            <select value={currentBranch} onChange={e => { setCurrentBranch(e.target.value); localStorage.setItem('pos_branch', e.target.value); }}
+              style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'8px 10px',borderRadius:8,fontSize:13}}>
+              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              {branches.length === 0 && <option value="">No branches</option>}
+            </select>
+            <button onClick={() => setTab('products')}
+              style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',padding:'6px 10px',borderRadius:8,fontSize:12}}>Manage</button>
+            <button onClick={printerDevice?.gatt?.connected ? disconnectPrinter : connectPrinter}
+              disabled={printerConnecting}
+              style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',padding:'6px 10px',borderRadius:8,fontSize:12}}>
+              {printerDevice?.gatt?.connected ? 'Disconnect BT' : 'Connect BT'}
+            </button>
+          </div>
+          <div className="top-nav-date">
+            {new Date().toLocaleDateString('en-PH',{weekday:'short',year:'numeric',month:'short',day:'numeric'})}
+            <div style={{fontSize:12,color: printerDevice?.gatt?.connected ? 'var(--green)' : printerError ? 'var(--red)' : 'var(--text2)', marginTop:4}}>
+              {printerDevice?.gatt?.connected ? `BT: ${printerDevice.name || 'Connected'}` : printerError || 'Bluetooth printer not connected'}
+            </div>
+          </div>
         </div>
       </div>
       {lastDbError && (
@@ -766,7 +945,7 @@ function POSApp({ supabaseUrl, supabaseKey }) {
 
             {/* Payment method */}
             <div style={{padding:'0 10px 10px',display:'flex',gap:8,flexWrap:'wrap'}}>
-              {[['cash','bi-cash-stack','Cash'],['card','bi-credit-card','Card'],['gcash','bi-phone','GCash'],['maya','bi-wallet','Maya']].map(([k,icon,label]) => (
+              {[['cash','bi-cash-stack','Cash'],['card','bi-credit-card','Card'],['gcash','bi-phone','GCash'],['maya','bi-wallet','Maya'],['grab','bi-bicycle','Grab']].map(([k,icon,label]) => (
                 <button key={k} onClick={() => setPaymentMethod(k)}
                   style={{flex:'1 1 120px',padding:'8px 4px',borderRadius:8,fontSize:11,fontWeight:500,
                     background: paymentMethod===k ? 'var(--amber)' : 'var(--bg3)',
@@ -830,16 +1009,53 @@ function POSApp({ supabaseUrl, supabaseKey }) {
             const todayCashSales = todayOrders.filter(o => (o.payment_method||'').toLowerCase() === 'cash').reduce((s,o) => s + parseFloat(o.total || 0), 0);
             const todayExpenses = expenses.filter(e => new Date(e.created_at).toDateString() === new Date().toDateString());
             const todayExpensesTotal = todayExpenses.reduce((s,e) => s + parseFloat(e.amount || 0), 0);
-            const cashOnHand = todayCashSales - todayExpensesTotal;
+            const manualCashBase = manualCashOnHand !== null ? manualCashOnHand : 0;
+            const cashOnHand = manualCashBase + todayCashSales - todayExpensesTotal;
             return (
-              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12,marginBottom:'1.5rem'}}>
-                <StatCard label="Today's Revenue" value={`₱${todayRevenue.toFixed(2)}`} sub={`${todayOrders.length} orders`} color="var(--amber)" />
-                <StatCard label="All-Time Revenue" value={`₱${totalRevenue.toFixed(2)}`} sub={`${orders.length} total orders`} color="var(--green)" />
-                <StatCard label="Cash On Hand" value={`₱${cashOnHand.toFixed(2)}`} sub={`Cash sales ₱${todayCashSales.toFixed(2)} · Expenses ₱${todayExpensesTotal.toFixed(2)}`} color="var(--green)" />
-                {Object.entries(paymentBreakdown).map(([method, total]) => (
-                  <StatCard key={method} label={method.charAt(0).toUpperCase()+method.slice(1)} value={`₱${total.toFixed(2)}`} sub="payment method" color="var(--blue)" />
-                ))}
-              </div>
+              <>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12,marginBottom:'1.5rem'}}>
+                  <StatCard label="Today's Revenue" value={`₱${todayRevenue.toFixed(2)}`} sub={`${todayOrders.length} orders`} color="var(--amber)" />
+                  <StatCard label="Monthly Revenue" value={`₱${monthlyRevenue.toFixed(2)}`} sub={`${monthlyOrders.length} orders this month`} color="var(--green)" />
+                  <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:var_radius,padding:'1rem 1.25rem'}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+                      <div style={{fontSize:12,color:'var(--text3)'}}>Cash On Hand</div>
+                      {editingCashOnHand ? (
+                        <button onClick={() => { setEditingCashOnHand(false); setCashOnHandInput(''); }}
+                          style={{background:'transparent',border:'1px solid var(--border)',color:'var(--text2)',padding:'4px 8px',borderRadius:8,fontSize:12}}>Cancel</button>
+                      ) : (
+                        <button onClick={() => { setEditingCashOnHand(true); setCashOnHandInput((manualCashOnHand !== null ? manualCashOnHand : 0).toFixed(2)); }}
+                          style={{background:'transparent',border:'1px solid var(--border)',color:'var(--text2)',padding:'4px 8px',borderRadius:8,fontSize:12}}>Edit</button>
+                      )}
+                    </div>
+                    {editingCashOnHand ? (
+                      <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:6,flexWrap:'wrap'}}>
+                        <span style={{fontSize:20,fontWeight:700,color:'var(--green)'}}>₱</span>
+                        <input value={cashOnHandInput} onChange={e => setCashOnHandInput(e.target.value)}
+                          style={{flex:'0 0 120px',minWidth:0,background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 10px',color:'var(--text)',fontSize:18}} />
+                        <button onClick={() => {
+                          const value = parseFloat(cashOnHandInput);
+                          if (isNaN(value)) { showToast('Enter a valid cash amount','error'); return; }
+                          setManualCashOnHand(value);
+                          setEditingCashOnHand(false);
+                          showToast('Manual cash amount saved');
+                        }}
+                          style={{flex:'0 0 auto',background:'var(--amber)',color:'#1a0f00',padding:'8px 12px',borderRadius:8,fontWeight:600,fontSize:13}}>Save</button>
+                      </div>
+                    ) : (
+                      <div style={{fontSize:22,fontWeight:700,color:'var(--green)',marginBottom:2}}>₱{cashOnHand.toFixed(2)}</div>
+                    )}
+                    <div style={{fontSize:12,color:'var(--text3)'}}>
+                      Manual cash ₱{manualCashBase.toFixed(2)} · Cash sales ₱{todayCashSales.toFixed(2)} · Expenses ₱{todayExpensesTotal.toFixed(2)}
+                      {manualCashOnHand !== null && !editingCashOnHand && (
+                        <div style={{marginTop:4,color:'var(--amber)',fontSize:11}}>Starting cash added to cash on hand</div>
+                      )}
+                    </div>
+                  </div>
+                  {Object.entries(paymentBreakdown).map(([method, total]) => (
+                    <StatCard key={method} label={method.charAt(0).toUpperCase()+method.slice(1)} value={`₱${total.toFixed(2)}`} sub="payment method" color="var(--blue)" />
+                  ))}
+                </div>
+              </>
             );
           })()}
 
@@ -887,14 +1103,14 @@ function POSApp({ supabaseUrl, supabaseKey }) {
               <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
                 <thead>
                   <tr style={{background:'var(--bg3)'}}>
-                    {['#','Date','Items','Payment','Total',''].map(h => (
+                    {['#','Date','Items','Payment','Total','Status',''].map(h => (
                       <th key={h} style={{padding:'10px 14px',textAlign:'left',color:'var(--text2)',fontWeight:500,fontSize:12,whiteSpace:'nowrap'}}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {orders.slice(0,50).map((o,i) => (
-                    <tr key={o.id} style={{borderTop:'1px solid var(--border)',background: i%2===0 ? 'transparent' : 'rgba(255,255,255,0.01)'}}>
+                    <tr key={o.id} style={{borderTop:'1px solid var(--border)',background: i%2===0 ? 'transparent' : 'rgba(255,255,255,0.01)', opacity: (o.status || 'completed') === 'voided' ? 0.65 : 1}}>
                       <td style={{padding:'10px 14px',fontFamily:'DM Mono',fontSize:12,color:'var(--text3)'}}>#{o.order_number || o.id.slice(-6)}</td>
                       <td style={{padding:'10px 14px',color:'var(--text2)',whiteSpace:'nowrap'}}>{new Date(o.created_at).toLocaleString('en-PH',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</td>
                       <td style={{padding:'10px 14px',color:'var(--text2)'}}>{Array.isArray(o.items) ? o.items.reduce((s,i)=>s+i.qty,0) : '—'} items</td>
@@ -903,9 +1119,23 @@ function POSApp({ supabaseUrl, supabaseKey }) {
                       </td>
                       <td style={{padding:'10px 14px',fontWeight:600,color:'var(--amber)'}}>₱{parseFloat(o.total).toFixed(2)}</td>
                       <td style={{padding:'10px 14px'}}>
+                        {(o.status || 'completed') === 'voided' ? <span style={{color:'var(--red)',fontWeight:600}}>Voided</span> : <span style={{color:'var(--text2)'}}>Active</span>}
+                      </td>
+                      <td style={{padding:'10px 14px',display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+                        <button onClick={() => openEditOrder(o)}
+                          style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',padding:'4px 10px',borderRadius:6,fontSize:11}}
+                          disabled={(o.status || 'completed') === 'voided'}>
+                          Edit
+                        </button>
+                        <button onClick={() => voidOrder(o.id)}
+                          style={{background:'var(--red-bg)',border:'1px solid var(--red)',color:'var(--red)',padding:'4px 10px',borderRadius:6,fontSize:11}}
+                          disabled={(o.status || 'completed') === 'voided'}>
+                          Void
+                        </button>
                         <button onClick={() => printReceipt(o)}
-                          style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',padding:'4px 10px',borderRadius:6,fontSize:11}}>
-                          <span style={{display:'inline-flex',alignItems:'center',gap:6}}><i className="bi bi-printer" /> Print</span>
+                          style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',padding:'4px 10px',borderRadius:6,fontSize:11}}
+                          disabled={(o.status || 'completed') === 'voided'}>
+                          <span style={{display:'inline-flex',alignItems:'center',gap:6}}><i className="bi bi-printer" /> BT Print</span>
                         </button>
                       </td>
                     </tr>
@@ -915,6 +1145,43 @@ function POSApp({ supabaseUrl, supabaseKey }) {
             </div>
           </div>
         </div>
+      )}
+
+      {orderModalOpen && editingOrder && (
+        <Modal onClose={() => { setOrderModalOpen(false); setEditingOrder(null); }}>
+          <div style={{fontWeight:700,fontSize:18,marginBottom:12}}>Edit Order</div>
+          <div style={{marginBottom:14,fontSize:13,color:'var(--text2)'}}>
+            Order #{editingOrder.order_number || editingOrder.id?.slice(-6).toUpperCase()} · {new Date(editingOrder.created_at).toLocaleString('en-PH')}
+          </div>
+          <div style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:var_radius,padding:'12px',marginBottom:14}}>
+            {Array.isArray(editingOrder.items) && editingOrder.items.map((item, index) => (
+              <div key={`${item.id}-${index}`} style={{display:'flex',justifyContent:'space-between',fontSize:13,padding:'6px 0',borderBottom:index < editingOrder.items.length-1 ? '1px solid var(--border)' : 'none'}}>
+                <span>{item.name} × {item.qty}</span>
+                <span>₱{(item.price * item.qty).toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{marginBottom:10}}>
+            <label style={{display:'block',fontSize:12,color:'var(--text2)',marginBottom:6}}>Payment Method</label>
+            <select value={editingOrder.payment_method} onChange={e => setEditingOrder(prev => ({ ...prev, payment_method: e.target.value }))}
+              style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,padding:'9px 12px',color:'var(--text)',fontSize:14}}>
+              {['cash','card','gcash','maya'].map(method => (
+                <option key={method} value={method}>{method.charAt(0).toUpperCase()+method.slice(1)}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{marginBottom:16}}>
+            <label style={{display:'block',fontSize:12,color:'var(--text2)',marginBottom:6}}>Order Note</label>
+            <input value={editingOrder.note || ''} onChange={e => setEditingOrder(prev => ({ ...prev, note: e.target.value }))}
+              style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,padding:'9px 12px',color:'var(--text)',fontSize:14}} />
+          </div>
+          <div style={{display:'flex',gap:10}}>
+            <button onClick={() => { setOrderModalOpen(false); setEditingOrder(null); }}
+              style={{flex:1,padding:'10px',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',borderRadius:8}}>Cancel</button>
+            <button onClick={saveOrder}
+              style={{flex:1,padding:'10px',background:'var(--amber)',color:'#1a0f00',borderRadius:8,fontWeight:700}}>Save</button>
+          </div>
+        </Modal>
       )}
 
       {/* Products Tab */}
@@ -949,14 +1216,9 @@ function POSApp({ supabaseUrl, supabaseKey }) {
               )}
             </div>
           </div>
-          <div style={{display:'flex',gap:10}}>
-            <button onClick={() => printReceipt(lastOrder)}
-              style={{flex:1,padding:'12px',background:'var(--bg3)',border:'1px solid var(--border2)',
-                color:'var(--text)',borderRadius:10,fontWeight:500,fontSize:14}}>
-              <span style={{display:'inline-flex',alignItems:'center',gap:6}}><i className="bi bi-printer" /> Print Receipt</span>
-            </button>
+          <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
             <button onClick={() => setReceiptOpen(false)}
-              style={{flex:1,padding:'12px',background:'var(--amber)',color:'#1a0f00',
+              style={{flex:1,minWidth:130,padding:'12px',background:'var(--amber)',color:'#1a0f00',
                 borderRadius:10,fontWeight:700,fontSize:14}}>
               New Order
             </button>
@@ -1121,10 +1383,12 @@ function ProductsManager({ db, categories, products, onRefresh, showToast, curre
   const [saving, setSaving] = useState(false);
   const [catForm, setCatForm] = useState({ name:'', icon:'bi-cup-fill' });
   const [showCatForm, setShowCatForm] = useState(false);
+  const [showIconDropdown, setShowIconDropdown] = useState(false);
+  const [categoryDeleteMode, setCategoryDeleteMode] = useState(false);
   const [branchesList, setBranchesList] = useState([]);
   const [branchForm, setBranchForm] = useState({ name:'', address:'' });
 
-  const ICONS = ['bi-cup-fill','bi-cup-straw','bi-bag-fill','bi-basket3-fill','bi-droplet-half','bi-bell-fill','bi-leaf','bi-thermometer-half','bi-alarm','bi-phone','bi-archive','bi-file-earmark-text','bi-box-seam'];
+  const ICONS = ['bi-cup-fill','bi-cup-straw','bi-mug-hot','bi-basket3-fill'];
 
   const save = async () => {
     if (!form.name || !form.price) { showToast('Name and price required','error'); return; }
@@ -1155,6 +1419,13 @@ function ProductsManager({ db, categories, products, onRefresh, showToast, curre
     if (!catForm.name) return;
     await db.from('pos_categories').insert({ name: catForm.name, icon: catForm.icon, sort_order: categories.length+1 });
     setCatForm({name:'',icon:'bi-cup-fill'}); setShowCatForm(false); onRefresh();
+  };
+
+  const deleteCategory = async (id) => {
+    if (!confirm('Delete this category? Products in this category will be set to no category.')) return;
+    const { error } = await db.from('pos_categories').delete().eq('id', id);
+    if (error) { showToast('Error deleting category','error'); }
+    else { showToast('Category deleted'); onRefresh(); }
   };
 
   const loadBranches = async () => {
@@ -1222,23 +1493,51 @@ function ProductsManager({ db, categories, products, onRefresh, showToast, curre
         <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:var_radius,padding:'1.25rem'}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1rem'}}>
             <div style={{fontWeight:600,fontSize:15}}>Categories</div>
-            <button onClick={() => setShowCatForm(!showCatForm)} style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',padding:'4px 12px',borderRadius:6,fontSize:12}}>
-              {showCatForm ? 'Cancel' : '+ Add'}
-            </button>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={() => setCategoryDeleteMode(m => !m)}
+                style={{background: categoryDeleteMode ? 'var(--red-bg)' : 'var(--bg3)',border:`1px solid ${categoryDeleteMode ? 'var(--red)' : 'var(--border)'}`,color: categoryDeleteMode ? 'var(--red)' : 'var(--text2)',padding:'4px 12px',borderRadius:6,fontSize:12}}>
+                {categoryDeleteMode ? 'Cancel Delete' : 'Delete Category'}
+              </button>
+              <button onClick={() => setShowCatForm(!showCatForm)} style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text2)',padding:'4px 12px',borderRadius:6,fontSize:12}}>
+                {showCatForm ? 'Cancel' : '+ Add'}
+              </button>
+            </div>
           </div>
           {showCatForm && (
-            <div style={{display:'flex',gap:8,marginBottom:'1rem'}}>
-              <input value={catForm.icon} onChange={e => setCatForm(f=>({...f,icon:e.target.value}))} placeholder="bi-cup-fill"
-                style={{...inputStyle,width:48,textAlign:'center',padding:'8px 4px'}} />
-              <input value={catForm.name} onChange={e => setCatForm(f=>({...f,name:e.target.value}))} placeholder="Category name"
-                style={{...inputStyle,flex:1}} />
-              <button onClick={saveCategory} style={{background:'var(--amber)',color:'#1a0f00',padding:'8px 12px',borderRadius:8,fontWeight:600,fontSize:13}}>Add</button>
+            <div style={{marginBottom:'1rem'}}>
+              <div style={{display:'flex',gap:8,marginBottom:'0.75rem',alignItems:'center'}}>
+                <div style={{position:'relative',display:'inline-flex',alignItems:'center',gap:8,padding:'10px 12px',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:16,cursor:'pointer'}}>
+                  <div style={{width:36,height:36,display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:12,background:'rgba(193,149,96,0.1)',color:'var(--amber)'}}>
+                    <i className={`bi ${catForm.icon}`} style={{fontSize:18}}></i>
+                  </div>
+                  <button type="button" onClick={() => setShowIconDropdown(d => !d)}
+                    style={{background:'transparent',border:'none',color:'var(--text)',fontSize:14,outline:'none',display:'inline-flex',alignItems:'center',gap:6}}>
+                    <i className="bi bi-caret-down-fill" style={{fontSize:12}}></i>
+                  </button>
+                  {showIconDropdown && (
+                    <div style={{position:'absolute',top:'100%',left:0,marginTop:8,padding:10,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:14,boxShadow:'0 16px 30px rgba(0,0,0,0.25)',zIndex:10,display:'grid',gridTemplateColumns:'repeat(5,44px)',gap:8}}>
+                      {ICONS.map(icon => (
+                        <button key={icon} type="button" onClick={() => { setCatForm(f => ({ ...f, icon })); setShowIconDropdown(false); }}
+                          style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:44,height:44,borderRadius:12,border:`1px solid ${catForm.icon === icon ? 'var(--amber)' : 'var(--border)'}`,background:'var(--bg3)',color: catForm.icon === icon ? 'var(--amber)' : 'var(--text2)',cursor:'pointer'}}>
+                          <i className={`bi ${icon}`} style={{fontSize:20}}></i>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <input value={catForm.name} onChange={e => setCatForm(f=>({...f,name:e.target.value}))} placeholder="Category name"
+                  style={{...inputStyle,flex:1}} />
+                <button onClick={saveCategory} style={{background:'var(--amber)',color:'#1a0f00',padding:'8px 12px',borderRadius:8,fontWeight:600,fontSize:13}}>Add</button>
+              </div>
             </div>
           )}
           <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
             {categories.map(c => (
-              <span key={c.id} style={{background:'var(--bg3)',border:'1px solid var(--border)',padding:'5px 12px',borderRadius:20,fontSize:13,display:'inline-flex',alignItems:'center',gap:6}}>
+              <span key={c.id}
+                onClick={categoryDeleteMode ? () => { if (confirm(`Delete category "${c.name}"? Products will be uncategorized.`)) deleteCategory(c.id); } : undefined}
+                style={{background: categoryDeleteMode ? 'rgba(208,105,105,0.08)' : 'var(--bg3)',border:`1px solid ${categoryDeleteMode ? 'var(--red)' : 'var(--border)'}`,padding:'8px 12px',borderRadius:20,fontSize:13,display:'inline-flex',alignItems:'center',gap:8,cursor: categoryDeleteMode ? 'pointer' : 'default'}}>
                 <UiIcon icon={c.icon} />{c.name}
+                {categoryDeleteMode && <span style={{marginLeft:6,color:'var(--red)',fontSize:12,fontWeight:600}}>Click to delete</span>}
               </span>
             ))}
           </div>
