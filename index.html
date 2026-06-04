@@ -389,8 +389,12 @@ function POSApp({ supabaseUrl, supabaseKey }) {
       const device = await navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalServices: [
-          '0000ffe0-0000-1000-8000-00805f9b34fb',
-          '000018f0-0000-1000-8000-00805f9b34fb'
+          '0000ffe0-0000-1000-8000-00805f9b34fb', // Most common 58mm BT printers (HM-10 style)
+          '000018f0-0000-1000-8000-00805f9b34fb', // Alternative serial profile
+          '00001101-0000-1000-8000-00805f9b34fb', // SPP (Serial Port Profile)
+          'e7810a71-73ae-499d-8c15-faa9aef0c3f2', // PrinterShare / some 58mm models
+          '49535343-fe7d-4ae5-8fa9-9fafd205e455', // ISSC BLE serial (common on 58mm)
+          '0000ff00-0000-1000-8000-00805f9b34fb', // Generic FF00 service
         ]
       });
       device.addEventListener('gattserverdisconnected', () => {
@@ -398,7 +402,14 @@ function POSApp({ supabaseUrl, supabaseKey }) {
         resetPrinter();
       });
       const server = await device.gatt.connect();
-      const serviceCandidates = ['0000ffe0-0000-1000-8000-00805f9b34fb', '000018f0-0000-1000-8000-00805f9b34fb'];
+      const serviceCandidates = [
+        '0000ffe0-0000-1000-8000-00805f9b34fb',
+        '000018f0-0000-1000-8000-00805f9b34fb',
+        '00001101-0000-1000-8000-00805f9b34fb',
+        'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+        '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+        '0000ff00-0000-1000-8000-00805f9b34fb',
+      ];
       let service = null;
       for (const sid of serviceCandidates) {
         try { service = await server.getPrimaryService(sid); break; } catch (err) {}
@@ -408,14 +419,23 @@ function POSApp({ supabaseUrl, supabaseKey }) {
         if (services.length) service = services[0];
       }
       if (!service) throw new Error('No printer service found');
-      const characteristicCandidates = ['0000ffe1-0000-1000-8000-00805f9b34fb', '00002a19-0000-1000-8000-00805f9b34fb'];
+      const characteristicCandidates = [
+        '0000ffe1-0000-1000-8000-00805f9b34fb', // HM-10 / most 58mm
+        '00002a19-0000-1000-8000-00805f9b34fb',
+        '49535343-8841-43f4-a8d4-ecbe34729bb3', // ISSC write char
+        '49535343-1e4d-4bd9-ba61-23c647249616', // ISSC write-without-response
+        '0000ff02-0000-1000-8000-00805f9b34fb', // FF02 write
+        '0000ff01-0000-1000-8000-00805f9b34fb',
+      ];
       let characteristic = null;
       for (const cid of characteristicCandidates) {
         try { characteristic = await service.getCharacteristic(cid); break; } catch (err) {}
       }
       if (!characteristic) {
         const characteristics = await service.getCharacteristics();
-        if (characteristics.length > 0) characteristic = characteristics[0];
+        // Prefer a characteristic that supports write or writeWithoutResponse
+        characteristic = characteristics.find(c => c.properties?.write || c.properties?.writeWithoutResponse)
+          || characteristics[0] || null;
       }
       if (!characteristic) throw new Error('No writable printer characteristic found');
       setPrinterDevice(device);
@@ -430,37 +450,61 @@ function POSApp({ supabaseUrl, supabaseKey }) {
   };
 
   const chunkWrite = async (characteristic, data) => {
-    const MTU = 20;
+    // 58mm printers work best with 100-byte chunks and slight delays between writes
+    const MTU = 100;
+    const useWithoutResponse = characteristic.properties?.writeWithoutResponse;
     for (let i = 0; i < data.length; i += MTU) {
       const chunk = data.slice(i, i + MTU);
-      await characteristic.writeValue(chunk);
-      await new Promise(resolve => setTimeout(resolve, 50));
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          if (useWithoutResponse) {
+            await characteristic.writeValueWithoutResponse(chunk);
+          } else {
+            await characteristic.writeValueWithResponse(chunk);
+          }
+          break;
+        } catch (err) {
+          retries--;
+          if (retries === 0) throw err;
+          // Wait longer on GATT errors before retrying
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+      }
+      // Small delay between chunks to prevent buffer overflow on 58mm printers
+      await new Promise(resolve => setTimeout(resolve, 80));
     }
   };
 
   const buildBluetoothReceipt = (order) => {
+    // 58mm thermal printer: ~32 characters per line at standard font
+    const WIDTH = 32;
+    const SEP = '-'.repeat(WIDTH);
     const date = new Date(order.created_at || Date.now());
     const lines = [
       CAFE_NAME,
       CAFE_ADDRESS,
       `Tel: ${CAFE_TEL}`,
-      '--------------------------------',
-      `Order #: ${order.order_number || order.id?.slice(-6).toUpperCase()}`,
+      SEP,
+      `Order#: ${order.order_number || order.id?.slice(-6).toUpperCase()}`,
       `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`,
-      `Payment: ${(order.payment_method || '').toUpperCase()}`,
-      '--------------------------------',
+      `Pay: ${(order.payment_method || '').toUpperCase()}`,
+      SEP,
       ...((order.items || []).map(i => {
-        const itemLine = `${i.name} x${i.qty}`;
-        const priceLine = `₱${(i.price * i.qty).toFixed(2)}`;
-        return itemLine.padEnd(28, ' ') + priceLine;
+        const price = `P${(i.price * i.qty).toFixed(2)}`;
+        const nameQty = `${i.name} x${i.qty}`;
+        // Truncate name if needed to fit 58mm width
+        const maxNameLen = WIDTH - price.length - 1;
+        const truncated = nameQty.length > maxNameLen ? nameQty.slice(0, maxNameLen - 1) + '.' : nameQty;
+        return truncated.padEnd(WIDTH - price.length, ' ') + price;
       })),
-      '--------------------------------',
-      `Subtotal: ₱${parseFloat(order.subtotal).toFixed(2)}`,
-      order.discount && parseFloat(order.discount) > 0 ? `Discount: -₱${parseFloat(order.discount).toFixed(2)}` : null,
-      `TOTAL: ₱${parseFloat(order.total).toFixed(2)}`,
-      order.change > 0 ? `Change: ₱${parseFloat(order.change).toFixed(2)}` : null,
+      SEP,
+      `Subtotal: P${parseFloat(order.subtotal).toFixed(2)}`,
+      order.discount && parseFloat(order.discount) > 0 ? `Discount: -P${parseFloat(order.discount).toFixed(2)}` : null,
+      `TOTAL: P${parseFloat(order.total).toFixed(2)}`,
+      order.change > 0 ? `Change: P${parseFloat(order.change).toFixed(2)}` : null,
       order.note ? `Note: ${order.note}` : null,
-      '--------------------------------',
+      SEP,
       'Thank you! Come again',
       '\n\n\n'
     ];
@@ -471,25 +515,45 @@ function POSApp({ supabaseUrl, supabaseKey }) {
     if (!printerCharacteristic) {
       throw new Error('No connected Bluetooth printer');
     }
+    // Re-establish GATT connection if it dropped
+    if (printerDevice && !printerDevice.gatt.connected) {
+      try {
+        await printerDevice.gatt.connect();
+      } catch (e) {
+        throw new Error('Printer disconnected. Please reconnect.');
+      }
+    }
     const receiptText = buildBluetoothReceipt(order);
     const encoder = new TextEncoder();
-    const bytes = encoder.encode(receiptText);
-    await chunkWrite(printerCharacteristic, bytes);
+    const textBytes = encoder.encode(receiptText);
+    // ESC/POS init sequence: ESC @ (initialize printer) — compatible with 58mm printers
+    const escInit = new Uint8Array([0x1B, 0x40]);
+    const combined = new Uint8Array(escInit.length + textBytes.length);
+    combined.set(escInit, 0);
+    combined.set(textBytes, escInit.length);
+    await chunkWrite(printerCharacteristic, combined);
   };
 
   const printReceipt = async (order) => {
     try {
       if (!printerCharacteristic || !printerDevice?.gatt?.connected) {
-        await connectPrinter();
-      }
-      if (!printerCharacteristic) {
-        throw new Error('Printer not connected');
+        // Don't auto-connect during checkout — it triggers a new browser permission prompt
+        // which fails mid-flow. Show a clear message instead.
+        showToast('No printer connected. Use "Connect BT" first, then re-print from Orders.', 'error');
+        return;
       }
       await sendBluetoothReceipt(order);
-      showToast('Receipt sent to Bluetooth printer');
+      showToast('Receipt sent to printer ✓');
     } catch (err) {
       console.error('Bluetooth print failed', err);
-      showToast(`Bluetooth print failed: ${err.message || err}`, 'error');
+      // Check for GATT-specific errors and give actionable guidance
+      const msg = err.message || String(err);
+      if (/gatt/i.test(msg) || /unknown/i.test(msg) || /disconnect/i.test(msg)) {
+        resetPrinter();
+        showToast('Printer disconnected. Reconnect via "Connect BT" and reprint.', 'error');
+      } else {
+        showToast(`Print failed: ${msg}`, 'error');
+      }
     }
   };
 
@@ -1640,4 +1704,3 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
 </body>
 </html>
- 
